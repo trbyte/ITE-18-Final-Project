@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Road Safety Simulator - Register</title>
+<link rel="stylesheet" href="auth.css">
+</head>
+<body>
+
+<div class="game-bg">
+  <div class="auth-container">
+    <div class="game-header">
+      <h1>🛠️ New Driver Setup</h1>
+      <p class="subtitle">Create Player Profile</p>
+    </div>
+
+    <div class="panel">
+      <h2>REGISTER</h2>
+
+      <input id="username" placeholder="👤 Username">
+      <input id="password" type="password" placeholder="🔑 Password">
+
+      <!-- BUTTON GROUP -->
+      <div class="buttons">
+        <button type="button" class="btn play" onclick="handleRegister()">
+          ✔ Create Driver
+        </button>
+
+        <button type="button" class="btn register" onclick="goToLogin()">
+          ⬅ Back to Login
+        </button>
+      </div>
+
+      <p id="message" class="system-message"></p>
+    </div>
+  </div>
+</div>
+
+<script src="auth.js"></script>
+</body>
+</html>
