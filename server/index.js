@@ -51,6 +51,7 @@ app.post("/register", async (req, res) => {
     );
     res.json({ message: "Registered successfully" });
   } catch (err) {
+<<<<<<< HEAD
     console.error("Registration error:", err);
     
     // Check for specific error types
@@ -73,6 +74,10 @@ app.post("/register", async (req, res) => {
     
     // Connection errors
     return res.status(500).json({ error: "Database connection failed. Please check server logs." });
+=======
+    console.error(err);
+    res.status(400).json({ error: "Username already exists" });
+>>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
   }
 });
 
@@ -171,6 +176,7 @@ app.get("/load-progress", authenticateToken, async (req, res) => {
 });
 
 // -----------------------------
+<<<<<<< HEAD
 // HEALTH CHECK ROUTE
 // -----------------------------
 app.get("/", (req, res) => {
@@ -197,6 +203,12 @@ app.get("/health", async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
+=======
+// TEST ROUTE
+// -----------------------------
+app.get("/", (req, res) => {
+  res.send("Server is running");
+>>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
 });
 
 // -----------------------------

@@ -1,6 +1,9 @@
 .env
+<<<<<<< HEAD
 
 # Dependencies
 node_modules/
 client/node_modules/
 server/node_modules/
+=======
+>>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
