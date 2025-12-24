@@ -17,7 +17,7 @@ RUNNING THE PROJECT
 ------------------------------------------------------
 1. Start the backend server:
 
-   node server.js
+   node index.js
 
    You should see:
    Server running on http://localhost:5000
