@@ -1,0 +1,38 @@
+body {
+  background: linear-gradient(to right, #141e30, #243b55);
+  font-family: Arial, sans-serif;
+}
+
+.auth-container {
+  width: 300px;
+  margin: 120px auto;
+  padding: 20px;
+  background: #000000cc;
+  border-radius: 10px;
+  color: white;
+  text-align: center;
+}
+
+.auth-container input {
+  width: 90%;
+  padding: 8px;
+  margin: 8px 0;
+  border-radius: 5px;
+  border: none;
+}
+
+.auth-container button {
+  width: 45%;
+  padding: 8px;
+  margin: 5px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background: #00ffcc;
+  font-weight: bold;
+}
+
+#message {
+  margin-top: 10px;
+  color: #ff8080;
+}
