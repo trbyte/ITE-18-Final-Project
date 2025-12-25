@@ -62,7 +62,6 @@ async function handleRegister() {
       body: JSON.stringify({ username, password })
     });
 
-<<<<<<< HEAD
     if (!res.ok) {
       let errorMessage = "Registration failed";
       try {
@@ -76,15 +75,6 @@ async function handleRegister() {
     }
 
     const data = await res.json();
-=======
-    const data = await res.json();
-
-    if (!res.ok) {
-      showMessage(data.error || "Registration failed", "error");
-      return;
-    }
-
->>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
     showMessage("Driver created! Redirecting to login...", "success");
 
     setTimeout(() => {
@@ -92,13 +82,9 @@ async function handleRegister() {
     }, 1500);
 
   } catch (err) {
-<<<<<<< HEAD
     console.error("Registration error:", err);
     const errorMsg = err.message || "Unknown error";
     showMessage(`Cannot connect to game server: ${errorMsg}. Make sure the server is running on ${API}`, "error");
-=======
-    showMessage("Cannot connect to game server", "error");
->>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
   }
 }
 
@@ -125,7 +111,6 @@ async function handleLogin() {
       body: JSON.stringify({ username, password })
     });
 
-<<<<<<< HEAD
     if (!res.ok) {
       let errorMessage = "Access denied";
       try {
@@ -139,15 +124,6 @@ async function handleLogin() {
     }
 
     const data = await res.json();
-=======
-    const data = await res.json();
-
-    if (!res.ok) {
-      showMessage(data.error || "Access denied", "error");
-      return;
-    }
-
->>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
 
@@ -158,13 +134,9 @@ async function handleLogin() {
     }, 1500);
 
   } catch (err) {
-<<<<<<< HEAD
     console.error("Login error:", err);
     const errorMsg = err.message || "Unknown error";
     showMessage(`Cannot connect to game server: ${errorMsg}. Make sure the server is running on ${API}`, "error");
-=======
-    showMessage("Cannot connect to game server", "error");
->>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
   }
 }
 

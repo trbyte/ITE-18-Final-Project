@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 dotenv.config();
 const { Pool } = pkg;
 
-<<<<<<< HEAD
 // Determine if SSL is needed based on the connection string
 // Cloud providers typically require SSL, local databases usually don't
 const needsSSL = process.env.DATABASE_URL && (
@@ -32,13 +31,3 @@ db.connect()
     console.error("❌ DB Connection Error:", err.message);
     console.error("Full error:", err);
   });
-=======
-export const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }  // required for Neon
-});
-
-db.connect()
-  .then(() => console.log("✅ Connected to Neon DB"))
-  .catch(err => console.error("❌ DB Connection Error:", err));
->>>>>>> 78785be399594bbc9476dc09a25b5092c96e3757
