@@ -1,11 +1,8 @@
 Model Information:
-* title:	Small city car
-* source:	https://sketchfab.com/3d-models/small-city-car-923feecc25b44f24b1060319bfcf6205
-* author:	terran4627 (https://sketchfab.com/terran4627)
+* title:	Van (game asset)
+* source:	https://sketchfab.com/3d-models/van-game-asset-2ace7b323f1848f2baa8b706c2e04b7c
+* author:	uday (https://sketchfab.com/udayjeet)
 
 Model License:
-* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
-* requirements:	Author must be credited. Commercial use is allowed.
-
-If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
-This work is based on "Small city car" (https://sketchfab.com/3d-models/small-city-car-923feecc25b44f24b1060319bfcf6205) by terran4627 (https://sketchfab.com/terran4627) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

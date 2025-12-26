@@ -3,24 +3,24 @@
     {
       "bufferView": 2,
       "componentType": 5126,
-      "count": 2393,
+      "count": 4993,
       "max": [
-        3.7861409187316895,
-        6.572621822357178,
-        5.646265983581543
+        0.7604290246963501,
+        1.4785480499267578,
+        1.2126350402832031
       ],
       "min": [
-        -3.7861409187316895,
-        -5.816254138946533,
-        0.3493939936161041
+        -0.7604290246963501,
+        -1.6449259519577026,
+        0.0
       ],
       "type": "VEC3"
     },
     {
       "bufferView": 2,
-      "byteOffset": 28716,
+      "byteOffset": 59916,
       "componentType": 5126,
-      "count": 2393,
+      "count": 4993,
       "max": [
         1.0,
         1.0,
@@ -36,16 +36,16 @@
     {
       "bufferView": 3,
       "componentType": 5126,
-      "count": 2393,
+      "count": 4993,
       "max": [
         1.0,
-        0.9999870657920837,
+        1.0,
         1.0,
         1.0
       ],
       "min": [
         -1.0,
-        -0.9999996423721313,
+        -1.0,
         -1.0,
         -1.0
       ],
@@ -54,267 +54,61 @@
     {
       "bufferView": 1,
       "componentType": 5126,
-      "count": 2393,
+      "count": 4993,
       "max": [
-        0.9990230202674866,
-        0.98956298828125
+        1.0,
+        0.9986019730567932
       ],
       "min": [
-        0.001281999982893467,
-        0.0009769999887794256
+        -0.0,
+        0.0
       ],
       "type": "VEC2"
     },
     {
       "bufferView": 0,
       "componentType": 5125,
-      "count": 9303,
-      "type": "SCALAR"
-    },
-    {
-      "bufferView": 2,
-      "byteOffset": 57432,
-      "componentType": 5126,
-      "count": 3777,
-      "max": [
-        2.939181089401245,
-        5.787228107452393,
-        5.529012203216553
-      ],
-      "min": [
-        -2.939181089401245,
-        -3.151031017303467,
-        1.0195670127868652
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 2,
-      "byteOffset": 102756,
-      "componentType": 5126,
-      "count": 3777,
-      "max": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "min": [
-        -1.0,
-        -1.0,
-        -0.9999998807907104
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 3,
-      "byteOffset": 38288,
-      "componentType": 5126,
-      "count": 3777,
-      "max": [
-        1.0,
-        1.0,
-        1.0,
-        1.0
-      ],
-      "min": [
-        -1.0,
-        -0.9999998807907104,
-        -1.0,
-        -1.0
-      ],
-      "type": "VEC4"
-    },
-    {
-      "bufferView": 1,
-      "byteOffset": 19144,
-      "componentType": 5126,
-      "count": 3777,
-      "max": [
-        0.9824219942092896,
-        0.9971939921379089
-      ],
-      "min": [
-        0.00278700003400445,
-        0.006347999908030033
-      ],
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 0,
-      "byteOffset": 37212,
-      "componentType": 5125,
-      "count": 14109,
-      "type": "SCALAR"
-    },
-    {
-      "bufferView": 2,
-      "byteOffset": 148080,
-      "componentType": 5126,
-      "count": 3176,
-      "max": [
-        3.5506389141082764,
-        5.903796195983887,
-        2.2263519763946533
-      ],
-      "min": [
-        -3.5506389141082764,
-        -4.746941089630127,
-        -0.0035349999088793993
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 2,
-      "byteOffset": 186192,
-      "componentType": 5126,
-      "count": 3176,
-      "max": [
-        1.0,
-        0.9998176693916321,
-        1.0
-      ],
-      "min": [
-        -1.0,
-        -0.9999979734420776,
-        -1.0
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 3,
-      "byteOffset": 98720,
-      "componentType": 5126,
-      "count": 3176,
-      "max": [
-        1.0,
-        1.0,
-        1.0,
-        1.0
-      ],
-      "min": [
-        -1.0,
-        -0.9996135234832764,
-        -0.9994586706161499,
-        -1.0
-      ],
-      "type": "VEC4"
-    },
-    {
-      "bufferView": 1,
-      "byteOffset": 49360,
-      "componentType": 5126,
-      "count": 3176,
-      "max": [
-        0.9902340173721313,
-        0.9995009899139404
-      ],
-      "min": [
-        0.00045900000259280205,
-        0.0009769999887794256
-      ],
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 0,
-      "byteOffset": 93648,
-      "componentType": 5125,
-      "count": 11508,
-      "type": "SCALAR"
-    },
-    {
-      "bufferView": 2,
-      "byteOffset": 224304,
-      "componentType": 5126,
-      "count": 188,
-      "max": [
-        3.017153024673462,
-        5.846027851104736,
-        5.4406890869140625
-      ],
-      "min": [
-        -3.017153024673462,
-        -5.296698093414307,
-        2.589181900024414
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 2,
-      "byteOffset": 226560,
-      "componentType": 5126,
-      "count": 188,
-      "max": [
-        0.97548907995224,
-        0.8939266204833984,
-        0.9582537412643433
-      ],
-      "min": [
-        -0.97548907995224,
-        -0.9096770882606506,
-        0.09329932183027267
-      ],
-      "type": "VEC3"
-    },
-    {
-      "bufferView": 1,
-      "byteOffset": 74768,
-      "componentType": 5126,
-      "count": 188,
-      "max": [
-        0.9892579913139343,
-        0.9913100004196167
-      ],
-      "min": [
-        0.00519599998369813,
-        0.0078119998797774315
-      ],
-      "type": "VEC2"
-    },
-    {
-      "bufferView": 0,
-      "byteOffset": 139680,
-      "componentType": 5125,
-      "count": 654,
+      "count": 15198,
       "type": "SCALAR"
     }
   ],
   "asset": {
     "extras": {
-      "author": "terran4627 (https://sketchfab.com/terran4627)",
-      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
-      "source": "https://sketchfab.com/3d-models/small-city-car-923feecc25b44f24b1060319bfcf6205",
-      "title": "Small city car"
+      "author": "uday (https://sketchfab.com/udayjeet)",
+      "license": "SKETCHFAB Standard (https://sketchfab.com/licenses)",
+      "source": "https://sketchfab.com/3d-models/van-game-asset-2ace7b323f1848f2baa8b706c2e04b7c",
+      "title": "Van (game asset)"
     },
-    "generator": "Sketchfab-14.86.0",
+    "generator": "Sketchfab-16.74.0",
     "version": "2.0"
   },
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 142296,
+      "byteLength": 60792,
       "name": "floatBufferViews",
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteLength": 76272,
-      "byteOffset": 142296,
+      "byteLength": 39944,
+      "byteOffset": 60792,
       "byteStride": 8,
       "name": "floatBufferViews",
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 228816,
-      "byteOffset": 218568,
+      "byteLength": 119832,
+      "byteOffset": 100736,
       "byteStride": 12,
       "name": "floatBufferViews",
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 149536,
-      "byteOffset": 447384,
+      "byteLength": 79888,
+      "byteOffset": 220568,
       "byteStride": 16,
       "name": "floatBufferViews",
       "target": 34962
@@ -322,105 +116,35 @@
   ],
   "buffers": [
     {
-      "byteLength": 596920,
+      "byteLength": 300456,
       "uri": "scene.bin"
     }
   ],
-  "extensionsUsed": [
-    "KHR_materials_specular"
-  ],
   "images": [
     {
-      "uri": "textures/MI_CityCar_Exterior_baseColor.png"
+      "uri": "textures/Material_baseColor.png"
     },
     {
-      "uri": "textures/MI_CityCar_Exterior_normal.png"
+      "uri": "textures/Material_metallicRoughness.png"
     },
     {
-      "uri": "textures/MI_CityCar_Interior_baseColor.png"
-    },
-    {
-      "uri": "textures/MI_CityCar_Interior_normal.png"
-    },
-    {
-      "uri": "textures/MI_CityCar_Wheel_baseColor.png"
-    },
-    {
-      "uri": "textures/MI_CityCar_Wheel_normal.png"
-    },
-    {
-      "uri": "textures/MI_CityCar_Windows_NoRain_baseColor.png"
+      "uri": "textures/Material_normal.png"
     }
   ],
   "materials": [
     {
       "doubleSided": true,
-      "extensions": {
-        "KHR_materials_specular": {
-          "specularColorFactor": [
-            1.0,
-            1.0,
-            1.0
-          ],
-          "specularFactor": 1.0
-        }
-      },
-      "name": "MI_CityCar_Exterior",
+      "name": "Material",
       "normalTexture": {
-        "index": 1
+        "index": 2
       },
       "pbrMetallicRoughness": {
         "baseColorTexture": {
           "index": 0
         },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.6342256411356907
-      }
-    },
-    {
-      "doubleSided": true,
-      "name": "MI_CityCar_Interior",
-      "normalTexture": {
-        "index": 3
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 2
-        },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.6342256411356907
-      }
-    },
-    {
-      "doubleSided": true,
-      "name": "MI_CityCar_Wheel",
-      "normalTexture": {
-        "index": 5
-      },
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 4
-        },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.6342256411356907
-      }
-    },
-    {
-      "alphaMode": "BLEND",
-      "doubleSided": true,
-      "name": "MI_CityCar_Windows_NoRain",
-      "pbrMetallicRoughness": {
-        "baseColorFactor": [
-          1.0,
-          1.0,
-          1.0,
-          0.5714303129304774
-        ],
-        "baseColorTexture": {
-          "index": 6
-        },
-        "metallicFactor": 0.0,
-        "roughnessFactor": 0.6342256411356907
+        "metallicRoughnessTexture": {
+          "index": 1
+        }
       }
     }
   ],
@@ -437,53 +161,6 @@
           },
           "indices": 4,
           "material": 0,
-          "mode": 4
-        }
-      ]
-    },
-    {
-      "name": "Object_1",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 6,
-            "POSITION": 5,
-            "TANGENT": 7,
-            "TEXCOORD_0": 8
-          },
-          "indices": 9,
-          "material": 1,
-          "mode": 4
-        }
-      ]
-    },
-    {
-      "name": "Object_2",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 11,
-            "POSITION": 10,
-            "TANGENT": 12,
-            "TEXCOORD_0": 13
-          },
-          "indices": 14,
-          "material": 2,
-          "mode": 4
-        }
-      ]
-    },
-    {
-      "name": "Object_3",
-      "primitives": [
-        {
-          "attributes": {
-            "NORMAL": 16,
-            "POSITION": 15,
-            "TEXCOORD_0": 17
-          },
-          "indices": 18,
-          "material": 3,
           "mode": 4
         }
       ]
@@ -516,28 +193,13 @@
     },
     {
       "children": [
-        2,
-        3,
-        4,
-        5
+        2
       ],
-      "name": "Small City car.obj.cleaner.materialmerger.gles"
+      "name": "172ed9ce234041dcb277682b2fb08e23.obj.cleaner.materialmerger.gles"
     },
     {
       "mesh": 0,
       "name": "Object_2"
-    },
-    {
-      "mesh": 1,
-      "name": "Object_3"
-    },
-    {
-      "mesh": 2,
-      "name": "Object_4"
-    },
-    {
-      "mesh": 3,
-      "name": "Object_5"
     }
   ],
   "samplers": [
@@ -569,22 +231,6 @@
     {
       "sampler": 0,
       "source": 2
-    },
-    {
-      "sampler": 0,
-      "source": 3
-    },
-    {
-      "sampler": 0,
-      "source": 4
-    },
-    {
-      "sampler": 0,
-      "source": 5
-    },
-    {
-      "sampler": 0,
-      "source": 6
     }
   ]
 }

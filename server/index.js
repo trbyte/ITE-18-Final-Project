@@ -3,21 +3,17 @@ import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { db } from "./db.js"; // your existing db.js
+import { db } from "./db.js";
 
 dotenv.config();
 
 const app = express();
 
-// -----------------------------
 // Middleware
-// -----------------------------
 app.use(cors());
 app.use(express.json());
 
-// -----------------------------
 // Password Validation Helper
-// -----------------------------
 function validatePassword(password) {
   if (password.length < 8) return "Password must be at least 8 characters long";
   if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
@@ -28,6 +24,21 @@ function validatePassword(password) {
 }
 
 // -----------------------------
+// AUTH MIDDLEWARE
+// -----------------------------
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Access denied" });
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token" });
+    req.user = user;
+    next();
+  });
+}
+
+// -----------------------------
 // AUTH ROUTES
 // -----------------------------
 
@@ -35,12 +46,14 @@ function validatePassword(password) {
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password)
+  if (!username || !password) {
     return res.status(400).json({ error: "All fields are required" });
+  }
 
   const passwordError = validatePassword(password);
-  if (passwordError)
+  if (passwordError) {
     return res.status(400).json({ error: passwordError });
+  }
 
   const hashed = await bcrypt.hash(password, 10);
 
@@ -66,22 +79,30 @@ app.post("/login", async (req, res) => {
       [username]
     );
 
-    if (!result.rows.length)
+    if (!result.rows.length) {
       return res.status(400).json({ error: "User not found" });
+    }
 
     const user = result.rows[0];
     const valid = await bcrypt.compare(password, user.password);
 
-    if (!valid)
+    if (!valid) {
       return res.status(400).json({ error: "Invalid password" });
+    }
 
     const token = jwt.sign(
-      { id: user.id },
+      { id: user.id, username: user.username },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "7d" }
     );
 
-    res.json({ token, user });
+    res.json({ 
+      token, 
+      user: {
+        id: user.id,
+        username: user.username
+      } 
+    });
 
   } catch (err) {
     console.error(err);
@@ -90,77 +111,142 @@ app.post("/login", async (req, res) => {
 });
 
 // -----------------------------
-// AUTH MIDDLEWARE
-// -----------------------------
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Access denied" });
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: "Invalid token" });
-    req.user = user;
-    next();
-  });
-}
-
-// -----------------------------
-// PLAYER PROGRESS ROUTES
+// SCORE ROUTES
 // -----------------------------
 
-// SAVE PLAYER PROGRESS
-app.post("/save-progress", authenticateToken, async (req, res) => {
-  const { level, score } = req.body;
+// SAVE PLAYER SCORE (Authenticated)
+app.post("/api/save-score", authenticateToken, async (req, res) => {
+  const { score } = req.body;
   const userId = req.user.id;
 
+  console.log(`Saving score for user ID ${userId}: ${score}`);
+
+  // Validate input
+  if (score === undefined || score === null) {
+    return res.status(400).json({ error: "Score is required" });
+  }
+
+  const scoreValue = parseInt(score);
+  if (isNaN(scoreValue)) {
+    return res.status(400).json({ error: "Score must be a number" });
+  }
+
   try {
-    await db.query(
-      `INSERT INTO player_progress (user_id, level, score)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id)
-       DO UPDATE SET level = $2, score = $3, last_played = CURRENT_TIMESTAMP`,
-      [userId, level || 1, score || 0]
+    // First check if user progress exists
+    const checkResult = await db.query(
+      "SELECT * FROM player_progress WHERE user_id = $1",
+      [userId]
     );
 
-    res.json({ message: "Progress saved successfully" });
+    if (checkResult.rows.length > 0) {
+      // Update existing record
+      await db.query(
+        `UPDATE player_progress 
+         SET score = $1, last_played = CURRENT_TIMESTAMP 
+         WHERE user_id = $2`,
+        [scoreValue, userId]
+      );
+    } else {
+      // Insert new record
+      await db.query(
+        `INSERT INTO player_progress (user_id, score, last_played) 
+         VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+        [userId, scoreValue]
+      );
+    }
+
+    console.log("Score saved successfully for user:", userId);
+
+    res.json({ 
+      success: true, 
+      message: "Score saved successfully",
+      score: scoreValue 
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to save progress" });
+    console.error("Error saving score:", err);
+    res.status(500).json({ error: "Failed to save score to database" });
   }
 });
 
-// LOAD PLAYER PROGRESS
+// LOAD PROGRESS (Authenticated)
 app.get("/load-progress", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
     const result = await db.query(
-      "SELECT * FROM player_progress WHERE user_id = $1",
+      `SELECT level, score, last_played 
+       FROM player_progress 
+       WHERE user_id = $1`,
       [userId]
     );
 
-    if (!result.rows.length) {
-      return res.json({ level: 1, score: 0 });
+    if (result.rows.length === 0) {
+      // No previous progress found
+      return res.json({ 
+        level: 1,
+        score: 0,
+        last_played: null
+      });
     }
 
-    res.json(result.rows[0]);
+    const progress = result.rows[0];
+    res.json({
+      level: progress.level || 1,
+      score: progress.score || 0,
+      last_played: progress.last_played
+    });
+
   } catch (err) {
-    console.error(err);
+    console.error("Error loading progress:", err);
     res.status(500).json({ error: "Failed to load progress" });
   }
 });
 
 // -----------------------------
-// TEST ROUTE
+// TEST ROUTES
 // -----------------------------
+
+// Test route to check if server is running
 app.get("/", (req, res) => {
-  res.send("Server is running");
+  res.send("Road Safety Simulator Server is running");
 });
 
-// -----------------------------
-// START SERVER
-// -----------------------------
+// Test database connection
+app.get("/test-db", async (req, res) => {
+  try {
+    const result = await db.query("SELECT NOW() as current_time");
+    res.json({ 
+      message: "Database connected successfully",
+      time: result.rows[0].current_time 
+    });
+  } catch (err) {
+    console.error("Database connection error:", err);
+    res.status(500).json({ error: "Database connection failed" });
+  }
+});
+
+// Health check
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    service: "road-safety-simulator"
+  });
+});
+
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📊 Database URL: ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`);
+});
+
+// Error handling
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Unhandled Rejection:', err);
 });

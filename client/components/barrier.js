@@ -3,10 +3,11 @@ import * as THREE from 'three';
 import * as Editor from '../editor.js';
 
 export class BarrierManager {
-  constructor(scene, loader) {
+  constructor(scene, loader, carController = null) { // Add carController parameter
     this.scene = scene;
     this.loader = loader;
-    this.barriers = []; // Store all barriers for recycling
+    this.barriers = [];
+    this.carController = carController; // Store reference to car
   }
 
   loadBarriers() {
@@ -289,7 +290,7 @@ export class BarrierManager {
     }
   }
 
-  placeBarrier(barrier, name, position, rotation, scale = null) {
+   placeBarrier(barrier, name, position, rotation, scale = null) {
     // Setup barrier mesh
     barrier.traverse((child) => {
       if (child.isMesh) {
@@ -358,6 +359,10 @@ export class BarrierManager {
     
     // Store barrier for recycling
     this.barriers.push(barrier);
+
+    if (this.carController) {
+      this.carController.barriers.push(barrier);
+    }
     
     // Register and make draggable
     Editor.makeDraggable(barrier, name);

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Test Game - Road Safety Simulator</title>
+  <title>Drive Smart</title>
   <link rel="stylesheet" href="style.css">
   <style>
     body {
@@ -37,6 +37,38 @@
       text-align: center;
       z-index: 100;
     }
+    #scoreboard {
+      position: absolute; 
+      top: 20px; 
+      right: 20px; 
+      color: #ffeb3b; 
+      background: rgba(0, 0, 0, 0.6); 
+      padding: 15px; 
+      border-radius: 8px; 
+      font-size: 24px; 
+      font-weight: bold; 
+      z-index: 1000;
+      border: 2px solid #000000;
+      pointer-events: none;
+    }
+    #game-over-modal {
+      display: none; 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0,0,0,0.8); 
+      justify-content: center; 
+      align-items: center; 
+      z-index: 1000;
+    }
+    #game-over-modal div {
+      background: white; 
+      padding: 30px; 
+      border-radius: 10px; 
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -56,23 +88,19 @@
     </div>
   </div>
 
-  <div id="scoreboard" style="
-    position: absolute; 
-    top: 20px; 
-    right: 20px; 
-    color: #ffeb3b; 
-    background: rgba(0, 0, 0, 0.6); 
-    padding: 15px; 
-    border-radius: 8px; 
-    font-size: 24px; 
-    font-weight: bold; 
-    z-index: 1000;
-    border: 2px solid #000000;
-    pointer-events: none;
-">
-  Score: <span id="score-value">0</span>
-</div>
+  <div id="scoreboard">
+    Score: <span id="score-value">0</span>
+  </div>
 
+  <div id="game-over-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;">
+  <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
+    <h2>Game Over!</h2>
+    <p>You hit a barrier!</p>
+    <p>Final Score: <span id="final-score">0</span></p>
+    <button onclick="window.location.href='game3d.html'">Play Again</button>
+    <button onclick="window.location.href='game.html'" style="margin-left: 10px;">Back to Dashboard</button>
+  </div>
+</div>
 
   <!-- Three.js -->
   <script type="importmap">
@@ -99,7 +127,7 @@
     const EDITOR_MODE = Editor.EDITOR_MODE;
     window.EDITOR_MODE = EDITOR_MODE;
     window.Editor = Editor;
-    
+  
     let sceneManager, roadManager, streetlightManager, cameraController, carController, barrierManager;
     let loader;
     
@@ -122,38 +150,49 @@
       // Initialize road manager
       roadManager = new RoadManager(scene, loader, (streetRoad, size) => {
         const roadLength = Math.max(size.x, size.z);
-        cameraController.setInitialPosition(roadLength);
+        if (cameraController) {
+          cameraController.setInitialPosition(roadLength);
+        }
         document.getElementById('status').textContent = 'Street Road loaded successfully!';
-        streetlightManager.loadStreetLight();
+        if (streetlightManager) {
+          streetlightManager.loadStreetLight();
+        }
       });
       
       // Initialize streetlight manager
       streetlightManager = new StreetlightManager(scene, loader);
       
-      // Initialize barrier manager
-      barrierManager = new BarrierManager(scene, loader);
-      
-      // Initialize camera controller
-      cameraController = new CameraController(camera, roadManager, streetlightManager, barrierManager);
-      cameraController.setupKeyboardControls();
-      
-      // Initialize car controller
+      // Initialize car controller FIRST so barrier manager can reference it
       carController = new CarController(scene, loader, (car) => {
         // Car loaded callback
         if (window.EDITOR_MODE && window.Editor) {
           window.Editor.makeDraggable(car.mesh, 'car');
         }
         // Connect car to camera controller for 3rd person view
-        cameraController.setCar(carController);
+        if (cameraController) {
+          cameraController.setCar(carController);
+        }
         document.getElementById('status').textContent = 'Car loaded successfully!';
+        
+        console.log('Car loaded, barriers count:', carController.barriers.length);
       });
+      
+      // Initialize barrier manager - PASS CAR CONTROLLER
+      barrierManager = new BarrierManager(scene, loader, carController);
+      
+      // Initialize camera controller
+      cameraController = new CameraController(camera, roadManager, streetlightManager, barrierManager);
+      cameraController.setupKeyboardControls();
       
       // Load the road (which will trigger streetlight loading)
       document.getElementById('status').textContent = 'Loading Street Road model...';
       roadManager.loadStreetRoad();
       
-      // Load barriers after road is loaded
-      barrierManager.loadBarriers();
+      // Load barriers after a short delay to ensure car is initialized
+      setTimeout(() => {
+        barrierManager.loadBarriers();
+        console.log('Barriers loading started...');
+      }, 500);
       
       // Setup editor handlers (keyboard and mouse)
       Editor.setupEditorHandlers(canvas);
@@ -166,19 +205,73 @@
         cameraController.onWindowResize();
       });
       
+      // Start animation loop
       animate();
     }
     
     function animate() {
       requestAnimationFrame(animate);
-      //cameraController.update();
-      //if (carController) carController.update();
+      
+      // Update camera controller
+      if (cameraController) {
+        cameraController.update();
+      }
+      
+      // Safety check: Only run car logic if carController and its mesh are loaded
+      if (carController && carController.mesh && !carController.isGameOver) {
+        // Get barriers from barrier manager
+        const barriers = barrierManager ? barrierManager.getBarriers() : [];
+        
+        // Debug logging (remove after testing)
+        if (barriers.length > 0 && Math.random() < 0.01) { // Log 1% of frames
+          console.log(`Debug - Barriers: ${barriers.length}, Car barriers: ${carController.barriers.length}`);
+          console.log('Car position:', carController.mesh.position);
+          console.log('First barrier position:', barriers[0].position);
+          
+          // Calculate distance to first barrier
+          const distance = carController.mesh.position.distanceTo(barriers[0].position);
+          console.log(`Distance to first barrier: ${distance.toFixed(2)}`);
+        }
+        
+        // Pass barriers into the update for collision checking
+        if (carController.update) {
+          carController.update(sceneManager.getCamera(), barriers);
+        }
+        
+        // Update the Scoreboard based on car's internal score
+        if (carController.score !== undefined) {
+          document.getElementById('score-value').textContent = carController.score;
+        } else {
+          // Fallback to Z-distance if score not implemented
+          const scoreValue = Math.floor(carController.mesh.position.z);
+          document.getElementById('score-value').textContent = Math.max(0, scoreValue);
+        }
+      }
+      
+      // Render the scene
       sceneManager.render();
     }
     
-    window.addEventListener('load', () => {
-      init();
-    });
+    // Start the game when page loads
+    window.addEventListener('load', init);
+    
+    // Add debug function to check barrier positions
+    window.debugBarriers = function() {
+      if (!barrierManager) {
+        console.log('Barrier manager not initialized');
+        return;
+      }
+      const barriers = barrierManager.getBarriers();
+      console.log(`Total barriers: ${barriers.length}`);
+      barriers.forEach((barrier, i) => {
+        console.log(`Barrier ${i}:`, barrier.position);
+      });
+      
+      if (carController) {
+        console.log('Car position:', carController.mesh.position);
+        console.log('Car barriers array length:', carController.barriers.length);
+      }
+    };
   </script>
 </body>
 </html>
