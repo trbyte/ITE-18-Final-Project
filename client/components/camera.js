@@ -58,7 +58,7 @@ export class CameraController {
 
     // Camera position: behind and above the car
     // Use the last forward direction (not affected by A/D)
-    const cameraDistance = 8; // Distance behind car
+    const cameraDistance = 5; // Distance behind car
     const cameraHeight = 3; // Height above car
     
     const desiredPos = car.position.clone();
