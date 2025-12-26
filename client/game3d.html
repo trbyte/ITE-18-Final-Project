@@ -56,6 +56,7 @@
     </div>
   </div>
 
+
   <!-- Three.js -->
   <script type="importmap">
     {
@@ -81,7 +82,7 @@
     window.EDITOR_MODE = EDITOR_MODE;
     window.Editor = Editor;
     
-    let sceneManager, roadManager, streetlightManager, cameraController;
+    let sceneManager, roadManager, streetlightManager, cameraController, carController;
     let loader;
     
     function init() {
@@ -115,6 +116,17 @@
       cameraController = new CameraController(camera, roadManager, streetlightManager);
       cameraController.setupKeyboardControls();
       
+      // Initialize car controller
+      carController = new CarController(scene, loader, (car) => {
+        // Car loaded callback
+        if (window.EDITOR_MODE && window.Editor) {
+          window.Editor.makeDraggable(car.mesh, 'car');
+        }
+        // Connect car to camera controller for 3rd person view
+        cameraController.setCar(carController);
+        document.getElementById('status').textContent = 'Car loaded successfully!';
+      });
+      
       // Load the road (which will trigger streetlight loading)
       document.getElementById('status').textContent = 'Loading Street Road model...';
       roadManager.loadStreetRoad();
@@ -136,6 +148,7 @@
     function animate() {
       requestAnimationFrame(animate);
       cameraController.update();
+      if (carController) carController.update();
       sceneManager.render();
     }
     

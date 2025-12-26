@@ -13,6 +13,7 @@ export class CameraController {
     this.car = null;
     this.followOffset = new THREE.Vector3(0, 5, -10);
     this.followLerp = 0.1;
+    this.lastForwardDirection = new THREE.Vector3(0, 0, 1); // Default to South
 
     
     // Get position constants from streetlight manager
@@ -39,37 +40,43 @@ export class CameraController {
 
   update() {
   if (this.car?.mesh) {
-    // --- CAR FOLLOW MODE ---
+    // --- CAR FOLLOW MODE (3rd Person View) ---
     const car = this.car.mesh;
 
-    // Car forward vector
-    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
+    // Access car's keys through the car controller
+    const carKeys = this.car.keys || {};
+    
+    // Only update camera direction when moving forward/backward (W/S)
+    // A/D (left/right) should not change the camera perspective
+    // W → South (+Z), S → North (-Z)
+    if (carKeys.w) {
+      this.lastForwardDirection.set(0, 0, 1); // South
+    } else if (carKeys.s) {
+      this.lastForwardDirection.set(0, 0, -1); // North
+    }
+    // If neither W nor S is pressed, keep the last forward direction
 
-    // Camera behind car
-    const desiredPos = car.position.clone().sub(forward.clone().multiplyScalar(this.followOffset.z));
-    desiredPos.y = car.position.y + this.followOffset.y;
+    // Camera position: behind and above the car
+    // Use the last forward direction (not affected by A/D)
+    const cameraDistance = 8; // Distance behind car
+    const cameraHeight = 3; // Height above car
+    
+    const desiredPos = car.position.clone();
+    desiredPos.sub(this.lastForwardDirection.clone().multiplyScalar(cameraDistance));
+    desiredPos.y = car.position.y + cameraHeight;
 
-    this.camera.position.lerp(desiredPos, this.followLerp);
+    // Smooth camera follow (higher lerp value for more responsive following)
+    // This ensures camera moves at nearly the same speed as the car
+    this.camera.position.lerp(desiredPos, 0.3);
 
-    // Camera looks ahead of the car
-    const lookAtPos = car.position.clone().add(forward.clone().multiplyScalar(10));
+    // Camera looks at a point ahead of the car in the forward direction
+    // This maintains the same perspective regardless of left/right movement
+    const lookAheadDistance = 5;
+    const lookAtPos = car.position.clone();
+    lookAtPos.add(this.lastForwardDirection.clone().multiplyScalar(lookAheadDistance));
+    lookAtPos.y = car.position.y + 1; // Look slightly above ground
+    
     this.camera.lookAt(lookAtPos);
-
-    // --- CAR MOVEMENT CONTROLS ---
-    const moveSpeed = 0.2; // adjust as needed
-    if (this.keys['w'] || this.keys['arrowup']) {
-      car.position.add(forward.clone().multiplyScalar(moveSpeed));
-    }
-    if (this.keys['s'] || this.keys['arrowdown']) {
-      car.position.add(forward.clone().multiplyScalar(-moveSpeed));
-    }
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(car.quaternion);
-    if (this.keys['a'] || this.keys['arrowleft']) {
-      car.position.add(right.clone().multiplyScalar(-moveSpeed));
-    }
-    if (this.keys['d'] || this.keys['arrowright']) {
-      car.position.add(right.clone().multiplyScalar(moveSpeed));
-    }
 
   } else {
     // --- FREE CAMERA MODE ---

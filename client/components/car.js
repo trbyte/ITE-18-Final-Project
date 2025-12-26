@@ -9,7 +9,7 @@ export class CarController {
 
     // Driving
     this.speed = 0;
-    this.maxSpeed = 0.4;
+    this.maxSpeed = 0.15;
     this.acceleration = 0.01;
     this.brake = 0.02;
     this.turnSpeed = 0.03;
@@ -23,19 +23,63 @@ export class CarController {
 
     this.setupControls();
 
-    loader.load('./models/car.glb', (gltf) => {
-      this.mesh = gltf.scene;
+    const possiblePaths = [
+      'scene.gltf',
+      '../assets/models/car/scene.gltf',
+      'assets/models/car/scene.gltf',
+      './assets/models/car/scene.gltf'
+    ];
 
-      // GLTF car orientation fix (most cars face -Z)
-      this.mesh.rotation.y = Math.PI;
+    const tryLoadPath = (pathIndex) => {
+      if (pathIndex >= possiblePaths.length) {
+        console.error('Error: Could not find car model file');
+        if (onLoaded) onLoaded(this);
+        return;
+      }
 
-      this.mesh.position.set(0, 0, 0);
-      this.mesh.scale.set(1, 1, 1);
+      const modelPath = possiblePaths[pathIndex];
 
-      this.scene.add(this.mesh);
+      if (modelPath.includes('/')) {
+        const pathParts = modelPath.split('/');
+        pathParts.pop();
+        loader.setPath(pathParts.join('/') + '/');
+      } else {
+        loader.setPath('../assets/models/car/');
+      }
 
-      if (onLoaded) onLoaded(this);
-    });
+      loader.load(
+        modelPath.includes('/') ? modelPath.split('/').pop() : modelPath,
+        (gltf) => {
+          this.mesh = gltf.scene;
+
+          // GLTF car orientation fix (most cars face -Z)
+          this.mesh.rotation.y = Math.PI / 2; // Rotated to the right
+
+          this.mesh.position.set(0, 0, 0);
+          this.mesh.scale.set(0.009, 0.009, 0.009);
+
+          // Setup shadows
+          this.mesh.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+
+          this.scene.add(this.mesh);
+
+          if (onLoaded) onLoaded(this);
+        },
+        (progress) => {
+          // Loading progress
+        },
+        (error) => {
+          tryLoadPath(pathIndex + 1);
+        }
+      );
+    };
+
+    tryLoadPath(0);
   }
 
   setupControls() {
@@ -53,21 +97,32 @@ export class CarController {
   update() {
     if (!this.mesh) return;
 
-    // ACCEL / BRAKE
+    // Movement directions (fixed world directions):
+    // W → South (+Z)
+    // A → East (+X)
+    // D → West (-X)
+    // S → North (-Z)
+    
+    const moveSpeed = this.maxSpeed;
+    
+    // W - Move South (positive Z)
     if (this.keys.w) {
-      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-    } else if (this.keys.s) {
-      this.speed = Math.max(this.speed - this.brake, -this.maxSpeed / 2);
-    } else {
-      this.speed *= 0.98; // friction
+      this.mesh.position.z += moveSpeed;
     }
-
-    // STEERING
-    if (this.keys.a) this.mesh.rotation.y += this.turnSpeed;
-    if (this.keys.d) this.mesh.rotation.y -= this.turnSpeed;
-
-    // MOVE FORWARD
-    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.mesh.quaternion);
-    this.mesh.position.add(forward.multiplyScalar(this.speed));
+    
+    // S - Move North (negative Z)
+    if (this.keys.s) {
+      this.mesh.position.z -= moveSpeed;
+    }
+    
+    // A - Move East (positive X)
+    if (this.keys.a) {
+      this.mesh.position.x += moveSpeed;
+    }
+    
+    // D - Move West (negative X)
+    if (this.keys.d) {
+      this.mesh.position.x -= moveSpeed;
+    }
   }
 }
