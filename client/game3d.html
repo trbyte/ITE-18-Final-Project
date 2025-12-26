@@ -50,11 +50,28 @@
   
   <div id="controls">
     <div>W: Forward | S: Backward | A: Left | D: Right</div>
-    <div>Mouse Wheel: Zoom In/Out | Right/Middle Mouse + Drag: Pan Camera</div>
+    <div>Mouse Wheel: Zoom In/Out | Left Click + Drag: Pan Left/Right/Up/Down (Rotate View) | Right/Middle Mouse: Move Camera</div>
     <div id="editor-controls" style="display: none; margin-top: 10px; font-weight: bold; color: #ffeb3b;">
       EDITOR MODE: Drag objects to position | Press P to export layout | Click object to select
     </div>
   </div>
+
+  <div id="scoreboard" style="
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    color: #ffeb3b; 
+    background: rgba(0, 0, 0, 0.6); 
+    padding: 15px; 
+    border-radius: 8px; 
+    font-size: 24px; 
+    font-weight: bold; 
+    z-index: 1000;
+    border: 2px solid #000000;
+    pointer-events: none;
+">
+  Score: <span id="score-value">0</span>
+</div>
 
 
   <!-- Three.js -->

@@ -15,6 +15,7 @@ export class CarController {
     this.acceleration = 0.01;
     this.brake = 0.02;
     this.turnSpeed = 0.03;
+    
 
     // Collision & Feedback Properties
     this.roadLimit = 1.5; 
