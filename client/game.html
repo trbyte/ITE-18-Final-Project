@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Road Safety Simulator</title>
+</head>
+<body>
+
+<h2>Welcome to Road Safety Simulator 🚦</h2>
+<p id="userInfo"></p>
+
+<script>
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!user) window.location.href = "index.html";
+
+  document.getElementById("userInfo").innerText =
+    `Coins: ${user.coins} | Level: ${user.level}`;
+</script>
+
+</body>
+</html>

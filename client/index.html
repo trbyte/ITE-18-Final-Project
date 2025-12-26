@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Road Safety Simulator - Login</title>
+<link rel="stylesheet" href="auth.css">
+</head>
+<body>
+
+<div class="game-bg">
+  <div class="auth-container">
+    <div class="game-header">
+      <h1>🚦 Road Safety Simulator</h1>
+      <p class="subtitle">Player Access Terminal</p>
+    </div>
+
+    <div class="panel">
+      <h2 id="formTitle">LOGIN</h2>
+
+      <input id="username" placeholder="👤 Username" />
+      <input id="password" type="password" placeholder="🔑 Password" />
+
+      <div class="buttons">
+        <button type="button" class="btn play" onclick="handleLogin()">▶ Start Game</button>
+        <button type="button" class="btn register" onclick="goToRegister()">➕ New Driver</button>
+      </div>
+
+      <p id="message" class="system-message"></p>
+    </div>
+  </div>
+</div>
+
+<script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Game - Road Safety Simulator</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    #game {
+      display: block;
+      width: 100%;
+      height: 100vh;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 100;
+    }
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 5px;
+      text-align: center;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  
+  <div id="info">
+    <div>Test Game - Street Road Model</div>
+    <div id="editor-mode" style="font-weight: bold; color: #ffeb3b;"></div>
+    <div id="status">Loading...</div>
+  </div>
+  
+  <div id="controls">
+    <div>W: Forward | S: Backward | A: Left | D: Right</div>
+    <div>Mouse Wheel: Zoom In/Out | Left Click + Drag: Pan Left/Right/Up/Down (Rotate View) | Right/Middle Mouse: Move Camera</div>
+    <div id="editor-controls" style="display: none; margin-top: 10px; font-weight: bold; color: #ffeb3b;">
+      EDITOR MODE: Drag objects to position | Press P to export layout | Click object to select
+    </div>
+  </div>
+
+  <!-- Three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import * as Editor from './editor.js';
+    import { SceneManager } from './components/scene.js';
+    import { RoadManager } from './components/road.js';
+    import { StreetlightManager } from './components/streetlight.js';
+    import { CameraController } from './components/camera.js';
+    
+    // Editor Mode is now configured in editor.js
+    const EDITOR_MODE = Editor.EDITOR_MODE;
+    window.EDITOR_MODE = EDITOR_MODE;
+    window.Editor = Editor;
+    
+    let sceneManager, roadManager, streetlightManager, cameraController;
+    let loader;
+    
+    function init() {
+      loader = new GLTFLoader();
+      
+      const canvas = document.getElementById("game");
+      
+      // Initialize scene manager (handles scene, camera, renderer, lighting)
+      sceneManager = new SceneManager(canvas);
+      sceneManager.setupMouseControls();
+      
+      const scene = sceneManager.getScene();
+      const camera = sceneManager.getCamera();
+      const renderer = sceneManager.getRenderer();
+      
+      // Initialize editor with scene, camera, and renderer
+      Editor.initEditor(scene, camera, renderer);
+      
+      // Initialize road manager
+      roadManager = new RoadManager(scene, loader, (streetRoad, size) => {
+        const roadLength = Math.max(size.x, size.z);
+        cameraController.setInitialPosition(roadLength);
+        document.getElementById('status').textContent = 'Street Road loaded successfully!';
+        streetlightManager.loadStreetLight();
+      });
+      
+      // Initialize streetlight manager
+      streetlightManager = new StreetlightManager(scene, loader);
+      
+      // Initialize camera controller
+      cameraController = new CameraController(camera, roadManager, streetlightManager);
+      cameraController.setupKeyboardControls();
+      
+      // Load the road (which will trigger streetlight loading)
+      document.getElementById('status').textContent = 'Loading Street Road model...';
+      roadManager.loadStreetRoad();
+      
+      // Setup editor handlers (keyboard and mouse)
+      Editor.setupEditorHandlers(canvas);
+      
+      // Update UI based on editor mode
+      Editor.updateEditorModeUI();
+      
+      window.addEventListener("resize", () => {
+        sceneManager.onWindowResize();
+        cameraController.onWindowResize();
+      });
+      
+      animate();
+    }
+    
+    function animate() {
+      requestAnimationFrame(animate);
+      cameraController.update();
+      sceneManager.render();
+    }
+    
+    window.addEventListener('load', () => {
+      init();
+    });
+  </script>
+</body>
+</html>
