@@ -3,10 +3,11 @@ import * as THREE from 'three';
 import * as Editor from '../editor.js';
 
 export class CameraController {
-  constructor(camera, roadManager, streetlightManager) {
+  constructor(camera, roadManager, streetlightManager, barrierManager = null) {
     this.camera = camera;
     this.roadManager = roadManager;
     this.streetlightManager = streetlightManager;
+    this.barrierManager = barrierManager;
     this.keys = {};
     this.moveSpeed = 0.1;
     this.eyeLevel = 1.7;
@@ -108,9 +109,14 @@ export class CameraController {
 
   // Recycle streetlights
   this.recycleStreetlights(cameraZ);
+
+  // Recycle barriers
+  if (this.barrierManager) {
+    this.barrierManager.recycleBarriers(cameraZ);
+  }
 }
   recycleStreetlights(cameraZ) {
-    // Helper function to recycle streetlights
+    // Helper function to recycle streetlights with consistent spacing
     const recycleStreetlights = (streetlights, xPosition) => {
       if (streetlights.length === 0) return;
 
@@ -132,13 +138,21 @@ export class CameraController {
             }
           }
 
-          // If no other streetlights found, use a default position
+          // Calculate new position using fixed spacing pattern
+          // Normalize to grid to prevent drift - always maintain exact 15-unit spacing
+          let newZ;
           if (frontmostZ === -Infinity) {
-            frontmostZ = cameraZ + 10; // Place ahead of camera
+            // If no other streetlights, place at next grid position ahead of camera
+            newZ = Math.ceil((cameraZ + 10) / this.STREETLIGHT_SPACING) * this.STREETLIGHT_SPACING;
+          } else {
+            // Normalize frontmost position to grid, then add spacing
+            // This ensures we always maintain the exact spacing pattern
+            const normalizedFrontmost = Math.round(frontmostZ / this.STREETLIGHT_SPACING) * this.STREETLIGHT_SPACING;
+            newZ = normalizedFrontmost + this.STREETLIGHT_SPACING;
           }
 
-          // Move streetlight to front, maintaining spacing
-          streetlight.position.z = frontmostZ + this.STREETLIGHT_SPACING;
+          // Move streetlight to front, maintaining consistent spacing
+          streetlight.position.z = newZ;
           // Enforce correct x and y positions
           streetlight.position.x = xPosition;
           streetlight.position.y = this.STREETLIGHT_Y;

@@ -76,13 +76,14 @@
     import { CarController } from './components/car.js';
     import { StreetlightManager } from './components/streetlight.js';
     import { CameraController } from './components/camera.js';
+    import { BarrierManager } from './components/barrier.js';
     
     // Editor Mode is now configured in editor.js
     const EDITOR_MODE = Editor.EDITOR_MODE;
     window.EDITOR_MODE = EDITOR_MODE;
     window.Editor = Editor;
     
-    let sceneManager, roadManager, streetlightManager, cameraController, carController;
+    let sceneManager, roadManager, streetlightManager, cameraController, carController, barrierManager;
     let loader;
     
     function init() {
@@ -112,8 +113,11 @@
       // Initialize streetlight manager
       streetlightManager = new StreetlightManager(scene, loader);
       
+      // Initialize barrier manager
+      barrierManager = new BarrierManager(scene, loader);
+      
       // Initialize camera controller
-      cameraController = new CameraController(camera, roadManager, streetlightManager);
+      cameraController = new CameraController(camera, roadManager, streetlightManager, barrierManager);
       cameraController.setupKeyboardControls();
       
       // Initialize car controller
@@ -130,6 +134,9 @@
       // Load the road (which will trigger streetlight loading)
       document.getElementById('status').textContent = 'Loading Street Road model...';
       roadManager.loadStreetRoad();
+      
+      // Load barriers after road is loaded
+      barrierManager.loadBarriers();
       
       // Setup editor handlers (keyboard and mouse)
       Editor.setupEditorHandlers(canvas);
