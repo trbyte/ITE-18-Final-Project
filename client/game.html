@@ -1,19 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Road Safety Simulator</title>
+  <meta charset="UTF-8">
+  <title>Road Safety Simulator - Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('images/city-background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; 
+      align-items: center;     
+      color: #fff;
+    }
+
+    .header {
+      font-size: 2.5rem;
+      font-weight: bold;
+      text-align: center;
+      text-shadow: 2px 2px 5px #000;
+      margin-bottom: 30px;
+    }
+
+    .user-info {
+      font-size: 1.2rem;
+      margin-bottom: 40px;
+      text-shadow: 1px 1px 2px #000;
+      text-align: center;
+    }
+
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 250px;
+      align-items: center;
+    }
+
+    .card {
+      cursor: pointer;
+      padding: 20px;
+      border-radius: 15px;
+      background: rgba(0,0,0,0.6);
+      text-align: center;
+      transition: 0.2s;
+      font-size: 1.3rem;
+      text-shadow: 1px 1px 2px #000;
+      width: 100%;
+    }
+
+    .card:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+
+    #modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+
+    #modalContent {
+      background: #fff;
+      color: #000;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    #modalContent button {
+      margin-top: 15px;
+      padding: 5px 15px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 
-<h2>Welcome to Road Safety Simulator 🚦</h2>
-<p id="userInfo"></p>
+<div class="header">Road Safety Simulator</div>
+
+<div class="dashboard">
+  <div class="card" id="playCard">Play<br><small>Click to start the game immediately!</small></div>
+  <div class="card" id="aboutCard">About<br><small>Learn about the developers and the game.</small></div>
+  <div class="card" id="quitCard">Quit<br><small>Exit and return to login.</small></div>
+</div>
+
+<div id="modal">
+  <div id="modalContent"></div>
+</div>
 
 <script>
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (!user) window.location.href = "index.html";
+  const modal = document.getElementById('modal');
+  const modalContent = document.getElementById('modalContent');
 
-  document.getElementById("userInfo").innerText =
-    `Coins: ${user.coins} | Level: ${user.level}`;
+  // Play card
+  document.getElementById('playCard').addEventListener('click', () => {
+    window.location.href = 'game3d.html';
+  });
+
+  // About card
+  document.getElementById('aboutCard').addEventListener('click', () => {
+    modalContent.innerHTML = `
+      <h2>About Road Safety Simulator</h2>
+      <p><strong>Developers:</strong> Alvarez, Aguilar, Cabalan</p>
+      <p><strong>Description:</strong> A fun and interactive game to improve road safety awareness while driving in a city simulator environment.</p>
+      <button id="closeModal">Close</button>
+    `;
+    modal.style.display = 'flex';
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  });
+
+  // Quit card
+  document.getElementById('quitCard').addEventListener('click', () => {
+    window.location.href = 'index.html'; 
+  });
 </script>
 
 </body>

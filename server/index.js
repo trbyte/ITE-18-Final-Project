@@ -51,28 +51,8 @@ app.post("/register", async (req, res) => {
     );
     res.json({ message: "Registered successfully" });
   } catch (err) {
-    console.error("Registration error:", err);
-    
-    // Check for specific error types
-    if (err.code === '23505') { // PostgreSQL unique violation
-      return res.status(400).json({ error: "Username already exists" });
-    }
-    
-    if (err.code === '42P01') { // Table doesn't exist
-      return res.status(500).json({ error: "Database table not found. Please check database setup." });
-    }
-    
-    if (err.message && err.message.includes('SSL')) {
-      return res.status(500).json({ error: "Database connection error. Please check SSL configuration." });
-    }
-    
-    // Generic database error
-    if (err.code && err.code.startsWith('2')) { // PostgreSQL error codes starting with 2
-      return res.status(500).json({ error: "Database error: " + err.message });
-    }
-    
-    // Connection errors
-    return res.status(500).json({ error: "Database connection failed. Please check server logs." });
+    console.error(err);
+    res.status(400).json({ error: "Username already exists" });
   }
 });
 
@@ -171,32 +151,10 @@ app.get("/load-progress", authenticateToken, async (req, res) => {
 });
 
 // -----------------------------
-// HEALTH CHECK ROUTE
+// TEST ROUTE
 // -----------------------------
 app.get("/", (req, res) => {
-  res.json({ 
-    status: "Server is running",
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get("/health", async (req, res) => {
-  try {
-    // Test database connection
-    await db.query("SELECT 1");
-    res.json({ 
-      status: "healthy",
-      database: "connected",
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    res.status(503).json({ 
-      status: "unhealthy",
-      database: "disconnected",
-      error: err.message,
-      timestamp: new Date().toISOString()
-    });
-  }
+  res.send("Server is running");
 });
 
 // -----------------------------

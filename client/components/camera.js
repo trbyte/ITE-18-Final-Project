@@ -10,6 +10,10 @@ export class CameraController {
     this.keys = {};
     this.moveSpeed = 0.1;
     this.eyeLevel = 1.7;
+    this.car = null;
+    this.followOffset = new THREE.Vector3(0, 5, -10);
+    this.followLerp = 0.1;
+
     
     // Get position constants from streetlight manager
     const constants = streetlightManager.getPositionConstants();
@@ -29,7 +33,46 @@ export class CameraController {
     });
   }
 
+  setCar(carController) {
+  this.car = carController;
+}
+
   update() {
+  if (this.car?.mesh) {
+    // --- CAR FOLLOW MODE ---
+    const car = this.car.mesh;
+
+    // Car forward vector
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
+
+    // Camera behind car
+    const desiredPos = car.position.clone().sub(forward.clone().multiplyScalar(this.followOffset.z));
+    desiredPos.y = car.position.y + this.followOffset.y;
+
+    this.camera.position.lerp(desiredPos, this.followLerp);
+
+    // Camera looks ahead of the car
+    const lookAtPos = car.position.clone().add(forward.clone().multiplyScalar(10));
+    this.camera.lookAt(lookAtPos);
+
+    // --- CAR MOVEMENT CONTROLS ---
+    const moveSpeed = 0.2; // adjust as needed
+    if (this.keys['w'] || this.keys['arrowup']) {
+      car.position.add(forward.clone().multiplyScalar(moveSpeed));
+    }
+    if (this.keys['s'] || this.keys['arrowdown']) {
+      car.position.add(forward.clone().multiplyScalar(-moveSpeed));
+    }
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(car.quaternion);
+    if (this.keys['a'] || this.keys['arrowleft']) {
+      car.position.add(right.clone().multiplyScalar(-moveSpeed));
+    }
+    if (this.keys['d'] || this.keys['arrowright']) {
+      car.position.add(right.clone().multiplyScalar(moveSpeed));
+    }
+
+  } else {
+    // --- FREE CAMERA MODE ---
     const forward = new THREE.Vector3(0, 0, 1);
     const right = new THREE.Vector3(1, 0, 0);
 
@@ -49,16 +92,16 @@ export class CameraController {
     this.camera.position.y = this.eyeLevel;
     this.camera.rotation.x = 0;
     this.camera.rotation.z = 0;
-
-    const cameraZ = this.camera.position.z;
-
-    // Recycle road segments
-    this.roadManager.recycleRoadSegments(cameraZ);
-
-    // Recycle streetlights
-    this.recycleStreetlights(cameraZ);
   }
 
+  const cameraZ = this.camera.position.z;
+
+  // Recycle road segments
+  this.roadManager.recycleRoadSegments(cameraZ);
+
+  // Recycle streetlights
+  this.recycleStreetlights(cameraZ);
+}
   recycleStreetlights(cameraZ) {
     // Helper function to recycle streetlights
     const recycleStreetlights = (streetlights, xPosition) => {
@@ -127,4 +170,3 @@ export class CameraController {
     this.camera.rotation.set(0, Math.PI, 0);
   }
 }
-
