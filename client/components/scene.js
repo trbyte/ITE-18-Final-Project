@@ -43,7 +43,6 @@ export class SceneManager {
   setupMouseControls() {
     const canvas = this.renderer.domElement;
     let isPanning = false;
-    let isSwiping = false;
     let panStart = new THREE.Vector2();
     let zoomLevel = this.camera.fov;
 
@@ -72,11 +71,8 @@ export class SceneManager {
         }
       }
 
-      if (e.button === 0) {
-        isSwiping = true;
-        panStart.set(e.clientX, e.clientY);
-        e.preventDefault();
-      } else if (e.button === 1 || e.button === 2) {
+      // Only handle right/middle mouse for camera panning
+      if (e.button === 1 || e.button === 2) {
         isPanning = true;
         panStart.set(e.clientX, e.clientY);
         e.preventDefault();
@@ -84,7 +80,7 @@ export class SceneManager {
     });
 
     canvas.addEventListener("mousemove", (e) => {
-      // Editor Mode: Don't rotate camera while dragging objects
+      // Editor Mode: Don't pan camera while dragging objects
       if (window.EDITOR_MODE && window.Editor) {
         const draggableObjects = window.Editor.getDraggableObjects();
         const isDragging = draggableObjects.some(obj => obj.userData?.isDragging);
@@ -93,18 +89,7 @@ export class SceneManager {
         }
       }
 
-      if (isSwiping) {
-        const deltaX = e.clientX - panStart.x;
-        const deltaY = e.clientY - panStart.y;
-        const panSpeed = 0.005;
-
-        this.camera.rotation.y -= deltaX * panSpeed;
-        this.camera.rotation.x -= deltaY * panSpeed;
-        this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
-        this.camera.rotation.z = 0;
-
-        panStart.set(e.clientX, e.clientY);
-      } else if (isPanning) {
+      if (isPanning) {
         const deltaX = e.clientX - panStart.x;
         const deltaY = e.clientY - panStart.y;
         const panSpeed = 0.01;
@@ -121,15 +106,12 @@ export class SceneManager {
     });
 
     canvas.addEventListener("mouseup", (e) => {
-      if (e.button === 0) {
-        isSwiping = false;
-      } else if (e.button === 1 || e.button === 2) {
+      if (e.button === 1 || e.button === 2) {
         isPanning = false;
       }
     });
 
     canvas.addEventListener("mouseleave", () => {
-      isSwiping = false;
       isPanning = false;
     });
 
@@ -160,4 +142,3 @@ export class SceneManager {
     return this.renderer;
   }
 }
-

@@ -1,5 +1,5 @@
 // Editor Mode Module for Road Safety Simulator
-// Handles all editor functionality: dragging, copy/paste, rotation, export/import
+// Handles all editor functionality: dragging, rotation, export/import
 
 import * as THREE from 'three';
 import { DragControls } from 'three/addons/controls/DragControls.js';
@@ -14,7 +14,6 @@ let dragControls = null;
 const DRAG_SPEED = 0.5; // Adjust this value: 0.1 = very slow, 1.0 = normal speed
 const objectRegistry = new Map(); // Maps object names to Three.js objects
 let selectedObject = null;
-let clipboard = null;
 
 // Initialize editor with scene, camera, and renderer
 export function initEditor(_scene, _camera, _renderer) {
@@ -196,86 +195,6 @@ export function selectObject(object) {
   updateEditorUI();
 }
 
-// Editor Mode: Copy selected object to clipboard
-export function copySelectedObject() {
-  if (!EDITOR_MODE || !selectedObject) return;
-  
-  // Store reference to the object for cloning later
-  clipboard = selectedObject;
-  
-  // Find the original object's name
-  const originalName = Array.from(objectRegistry.entries()).find(([n, obj]) => obj === selectedObject)?.[0] || 'object';
-  
-  document.getElementById('status').textContent = `Copied object: ${originalName} (Press V to paste)`;
-  setTimeout(() => {
-    document.getElementById('status').textContent = 'Street Road loaded successfully!';
-  }, 2000);
-}
-
-// Editor Mode: Paste object from clipboard
-export function pasteFromClipboard() {
-  if (!EDITOR_MODE || !clipboard) {
-    document.getElementById('status').textContent = 'Nothing to paste! Copy an object first (C key)';
-    setTimeout(() => {
-      document.getElementById('status').textContent = 'Street Road loaded successfully!';
-    }, 2000);
-    return;
-  }
-  
-  // Clone the object from clipboard
-  const cloned = clipboard.clone();
-  
-  // Clone all children recursively
-  cloned.traverse(function(child) {
-    if (child.isMesh) {
-      if (child.geometry) child.geometry = child.geometry.clone();
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material = child.material.map(mat => mat ? mat.clone() : null);
-        } else {
-          child.material = child.material.clone();
-        }
-      }
-    }
-  });
-  
-  // Offset position slightly from the original
-  cloned.position.x = clipboard.position.x + 0.5;
-  cloned.position.y = clipboard.position.y;
-  cloned.position.z = clipboard.position.z;
-  
-  // Copy rotation and scale
-  cloned.rotation.copy(clipboard.rotation);
-  cloned.scale.copy(clipboard.scale);
-  
-  // Add to scene first
-  scene.add(cloned);
-  
-  // Register and make draggable
-  // Find the original object's name
-  const originalName = Array.from(objectRegistry.entries()).find(([n, obj]) => obj === clipboard)?.[0] || 'object';
-  const baseName = originalName.replace(/_\d+$/, ''); // Remove trailing _number
-  const newName = `${baseName}_${objectRegistry.size + 1}`;
-  
-  // Make the cloned object draggable (this adds it to draggableObjects and reinitializes DragControls)
-  makeDraggable(cloned, newName);
-  
-  // Ensure the object is properly set up for dragging
-  cloned.traverse(function(child) {
-    if (child.isMesh && !child.userData.parentDraggable) {
-      child.userData.parentDraggable = cloned;
-    }
-  });
-  
-  // Select the new object so user can immediately interact with it
-  selectObject(cloned);
-  
-  document.getElementById('status').textContent = `Pasted object: ${newName}`;
-  setTimeout(() => {
-    document.getElementById('status').textContent = 'Street Road loaded successfully!';
-  }, 2000);
-}
-
 // Editor Mode: Rotate selected object
 export function rotateSelectedObject(axis, angle) {
   if (!EDITOR_MODE || !selectedObject) return;
@@ -297,16 +216,16 @@ function updateEditorUI() {
   
   const editorControlsDiv = document.getElementById('editor-controls');
   if (editorControlsDiv) {
-    if (selectedObject) {
-      const name = Array.from(objectRegistry.entries()).find(([n, obj]) => obj === selectedObject)?.[0] || 'Unknown';
-      editorControlsDiv.innerHTML = `
-        EDITOR MODE: Drag objects to position | Press P to export layout<br>
-        <span style="color: #4caf50;">Selected: ${name}</span> | 
-        C: Copy | V: Paste | R: Rotate Y | X: Rotate X | Z: Rotate Z (Shift for reverse)
-      `;
-    } else {
-      editorControlsDiv.innerHTML = 'EDITOR MODE: Drag objects to position | Press P to export layout | Click object to select';
-    }
+      if (selectedObject) {
+        const name = Array.from(objectRegistry.entries()).find(([n, obj]) => obj === selectedObject)?.[0] || 'Unknown';
+        editorControlsDiv.innerHTML = `
+          EDITOR MODE: Drag objects to position | Press P to export layout<br>
+          <span style="color: #4caf50;">Selected: ${name}</span> | 
+          R: Rotate Y | X: Rotate X | Z: Rotate Z (Shift for reverse)
+        `;
+      } else {
+        editorControlsDiv.innerHTML = 'EDITOR MODE: Drag objects to position | Press P to export layout | Click object to select';
+      }
   }
 }
 
@@ -323,12 +242,28 @@ export function exportLayout() {
       xPos = -0.8350271700107539; // Always use correct mirror x position
     }
     
+    // Calculate original Z position for streetlights based on their number
+    let zPos = object.position.z;
+    if (name.startsWith('streetlight_')) {
+      const match = name.match(/streetlight_(?:mirror_)?(\d+)/);
+      if (match) {
+        const streetlightNum = parseInt(match[1]);
+        if (name.startsWith('streetlight_mirror_')) {
+          // Mirror streetlights: 4, 19, 34, 49, 64, 79 (starting at 4, intervals of 15)
+          zPos = 4 + (streetlightNum - 1) * 15;
+        } else {
+          // Regular streetlights: 0, 15, 30, 45, 60, 75 (starting at 0, intervals of 15)
+          zPos = (streetlightNum - 1) * 15;
+        }
+      }
+    }
+    
     layout.push({
       name: name,
       position: {
         x: xPos,
         y: object.position.y,
-        z: object.position.z
+        z: zPos
       },
       rotation: {
         x: object.rotation.x,
@@ -341,6 +276,40 @@ export function exportLayout() {
         z: object.scale.z
       }
     });
+  });
+  
+  // Sort layout to ensure streetlights are in numerical order
+  layout.sort((a, b) => {
+    // Extract numbers from streetlight names for proper numerical sorting
+    const getStreetlightNumber = (name) => {
+      if (name.startsWith('streetlight_mirror_')) {
+        const match = name.match(/streetlight_mirror_(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      } else if (name.startsWith('streetlight_')) {
+        const match = name.match(/streetlight_(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      }
+      return 0;
+    };
+    
+    const aNum = getStreetlightNumber(a.name);
+    const bNum = getStreetlightNumber(b.name);
+    
+    // If both are streetlights, sort by number
+    if (aNum > 0 && bNum > 0) {
+      // Regular streetlights come before mirror streetlights
+      const aIsMirror = a.name.startsWith('streetlight_mirror_');
+      const bIsMirror = b.name.startsWith('streetlight_mirror_');
+      
+      if (aIsMirror !== bIsMirror) {
+        return aIsMirror ? 1 : -1; // Regular before mirror
+      }
+      
+      return aNum - bNum; // Sort by number
+    }
+    
+    // Non-streetlight objects maintain their order
+    return 0;
   });
   
   const jsonString = JSON.stringify(layout, null, 2);
@@ -459,16 +428,6 @@ export function setupEditorHandlers(canvas) {
     // Editor Mode: Export layout with P key
     if (e.key.toLowerCase() === 'p') {
       exportLayout();
-    }
-    // Editor Mode: Copy selected object with C key (or Ctrl+C)
-    if (e.key.toLowerCase() === 'c') {
-      e.preventDefault();
-      copySelectedObject();
-    }
-    // Editor Mode: Paste from clipboard with V key (or Ctrl+V)
-    if (e.key.toLowerCase() === 'v') {
-      e.preventDefault();
-      pasteFromClipboard();
     }
     // Editor Mode: Rotate with R key (Y axis)
     if (e.key.toLowerCase() === 'r' && selectedObject) {
