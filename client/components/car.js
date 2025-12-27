@@ -365,8 +365,7 @@ export class CarController {
         return { isNewHighscore: false };
       }
       
-      const apiBase = window.API_BASE || 'http://localhost:5000';
-      const response = await fetch(`${apiBase}/api/save-score`, {
+      const response = await fetch('http://localhost:5000/api/save-score', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
