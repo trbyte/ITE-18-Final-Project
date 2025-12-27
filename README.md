@@ -145,3 +145,10 @@ TROUBLESHOOTING
 LICENSE
 ------------------------------------------------------
 See individual license files in the `assets/models/` directories for 3D model licenses.
+
+------------------------------------------------------
+DEVELOPERS
+------------------------------------------------------
+1. Lavieen Alvarez
+2. Joshua Kyle Cabalan
+3. Eian Gabriel Aguilar
