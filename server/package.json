@@ -10,14 +10,19 @@
     "test:db": "node -e \"import('./db.js').then(m => m.testNeonConnection())\"",
     "migrate": "node -e \"import('fs').then(fs => import('./db.js').then(async ({ db }) => { const sql = fs.readFileSync('./migrations.sql', 'utf8'); await db.query(sql); console.log('Migrations applied'); process.exit(0); }))\""
   },
-  "keywords": ["game", "simulator", "neondb", "postgresql"],
+  "keywords": [
+    "game",
+    "simulator",
+    "neondb",
+    "postgresql"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "bcrypt": "^5.1.1",
+    "express": "^4.22.1",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3"
   },
