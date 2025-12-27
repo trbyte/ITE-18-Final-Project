@@ -235,11 +235,22 @@
           scoreValueEl.textContent = data.score || '0';
           
           if (data.last_played) {
-            const date = new Date(data.last_played);
-            scoreDateEl.textContent = `Last: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-          } else {
-            scoreDateEl.textContent = 'No previous games';
-          }
+    const date = new Date(data.last_played); // Converts UTC string to 10:17 AM local time
+    
+    const options = {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true // This converts 10:17 to 10:17 AM
+    };
+
+    // 'en-GB' ensures DD/MM/YYYY format
+    scoreDateEl.textContent = `Last: ${date.toLocaleString('en-GB', options)}`;
+} else {
+    scoreDateEl.textContent = 'No previous games';
+}
         } else {
           scoreValueEl.classList.remove('loading');
           scoreValueEl.textContent = 'Error';
@@ -270,9 +281,22 @@
       modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center;z-index:1000;';
       modal.innerHTML = `
         <div style="background:white;padding:25px;border-radius:12px;max-width:450px;width:90%;text-align:center;color:#000;">
-          <h2 style="margin-bottom:15px;">About Road Safety Simulator</h2>
+          <h2 style="margin-bottom:15px;">About Car Simulator Simulator</h2>
           <p style="margin-bottom:10px;"><strong>Developers:</strong> Alvarez, Aguilar, Cabalan</p>
-          <p style="margin-bottom:20px;line-height:1.5;">Interactive driving simulator teaching road safety awareness.</p>
+          <p style="margin-bottom:20px;line-height:1.5;"><strong>How to Play</strong></p>
+          <ul style="line-height:1.6; margin-bottom:20px; text-align:left; padding-left:20px;">
+          <li>Use the <strong>W, A, S, D</strong> keys to control the car:</li>
+      <ul style="padding-left:20px;">
+          <li><strong> W</strong> Move forward</li>
+          <li><strong>A</strong> Turn left</li>
+          <li><strong>S</strong> Move backward / brake</li>
+          <li><strong>D</strong> Turn right</li>
+      </ul>
+          <li>Drive carefully along the road and avoid all barriers and obstacles.</li>
+          <li>Your score increases the longer you drive without crashing.</li>
+          <li>Crashing into any barrier will immediately end the game.</li>
+          <li>The objective is to drive safely and achieve the highest score possible.</li>
+      </ul>
           <button onclick="this.parentElement.parentElement.remove()" style="background:#667eea;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;">
             Close
           </button>

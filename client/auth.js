@@ -45,7 +45,7 @@ async function handleLogin() {
   messageEl.textContent = isRegisterMode ? 'Creating account...' : 'Logging in...';
 
   try {
-    console.log(`🌐 Sending request to: ${fullUrl}`);
+    console.log(`Sending request to: ${fullUrl}`);
     
     const response = await fetch(fullUrl, {
       method: 'POST',
@@ -55,23 +55,23 @@ async function handleLogin() {
       body: JSON.stringify({ username, password }),
     });
 
-    console.log(`📡 Response status: ${response.status}`);
+    console.log(`Response status: ${response.status}`);
     
     // First get response as text to see what's happening
     const responseText = await response.text();
-    console.log('📦 Raw response:', responseText);
+    console.log('Raw response:', responseText);
     
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('❌ Failed to parse JSON:', parseError);
+      console.error('Failed to parse JSON:', parseError);
       messageEl.textContent = 'Server returned invalid response';
       messageEl.style.color = '#ff5252';
       return;
     }
 
-    console.log('✅ Parsed data:', data);
+    console.log('Parsed data:', data);
 
     if (response.ok) {
       if (isRegisterMode) {
@@ -86,18 +86,18 @@ async function handleLogin() {
           localStorage.setItem('gameToken', data.token);
           localStorage.setItem('gameUsername', data.user.username);
           
-          console.log('🔑 Token saved to localStorage');
-          console.log('👤 Username:', data.user.username);
+          console.log('Token saved to localStorage');
+          console.log('Username:', data.user.username);
           
           messageEl.textContent = 'Login successful! Redirecting...';
           messageEl.style.color = '#4CAF50';
 
           // Redirect after 1 second
           setTimeout(() => {
-            window.location.href = 'menu.html';
+            window.location.href = 'game.html';
           }, 1000);
         } else {
-          console.error('❌ Missing token or username in response:', data);
+          console.error('Missing token or username in response:', data);
           messageEl.textContent = 'Server response missing required data';
           messageEl.style.color = '#ff5252';
         }
@@ -121,13 +121,13 @@ async function handleLogin() {
 async function testServerConnection() {
   try {
     const testResponse = await fetch('http://localhost:5000');
-    console.log('🧪 Server test response:', testResponse.status);
+    console.log('Server test response:', testResponse.status);
     if (testResponse.ok) {
       const text = await testResponse.text();
-      console.log('🧪 Server says:', text);
+      console.log('Server says:', text);
     }
   } catch (testError) {
-    console.error('🧪 Server test failed:', testError);
+    console.error('Server test failed:', testError);
   }
 }
 
@@ -156,7 +156,7 @@ window.addEventListener('load', function () {
 
 // Debug functions
 window.debugAuth = function() {
-  console.log('🔧 DEBUG AUTH');
+  console.log('DEBUG AUTH');
   console.log('LocalStorage:');
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
