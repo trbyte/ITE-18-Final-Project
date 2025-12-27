@@ -208,7 +208,7 @@ app.get("/health", (req, res) => {
     status: "ok", 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    service: "road-safety-simulator"
+    service: "drive-smart"
   });
 });
 
@@ -227,7 +227,7 @@ app.get("/test-db", async (req, res) => {
 
 app.get("/api", (req, res) => {
   res.json({ 
-    message: "Road Safety Simulator API",
+    message: "Drive Smart API",
     version: "1.0.0",
     endpoints: {
       auth: ["POST /register", "POST /login"],
@@ -256,17 +256,23 @@ app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, '../client', 'index.html'));
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+// Export app for Vercel serverless functions
+export default app;
 
-// Error handling
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-});
+// Only start server if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  });
 
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-});
+  // Error handling
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+  });
+
+  process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+  });
+}
