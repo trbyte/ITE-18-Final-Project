@@ -22,7 +22,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static files from client directory
 app.use(express.static(path.join(__dirname, '../client')));
+// Serve static files from assets directory
+app.use('/assets', express.static(path.join(__dirname, '../assets')));
 
 function validatePassword(password) {
   if (password.length < 8) return "Password must be at least 8 characters long";
