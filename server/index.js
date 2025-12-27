@@ -283,7 +283,7 @@ app.get('/images/:filename', (req, res) => {
 });
 
 // Catch-all route for static files and SPA routing
-app.get('/*', (req, res, next) => {
+app.get('/*splat', (req, res, next) => {
   // If it's a file with extension, try to serve it from client directory
   if (req.path.includes('.')) {
     const filePath = path.join(__dirname, '../client', req.path);

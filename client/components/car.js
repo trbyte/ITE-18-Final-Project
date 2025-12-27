@@ -120,9 +120,9 @@ export class CarController {
     if (forwardMovement < 0) {
       this.distanceTraveled += Math.abs(forwardMovement);
       
-      // Award 5 points per unit of forward travel
+      // Award 1 point per unit of forward travel
       const unitsTraveled = Math.floor(this.distanceTraveled);
-      this.score = unitsTraveled * this.scorePerUnit;
+      this.score = unitsTraveled;
       
       // Update speed based on score (gradually increases from slow start to max speed)
       const speedProgress = Math.min(this.score / this.scoreForMaxSpeed, 1.0);
