@@ -25,7 +25,13 @@ This guide will help you deploy Drive Smart to Vercel.
    - Import your GitHub repository
    - Vercel will auto-detect the configuration
 
-3. **Configure Environment Variables**
+3. **Configure Build Settings**
+   - Root Directory: Leave as default (root of repository)
+   - Build Command: Leave empty (Vercel will auto-detect)
+   - Output Directory: Leave empty
+   - Install Command: `cd server && npm install` (or leave empty for auto-detect)
+
+4. **Configure Environment Variables**
    In Vercel dashboard, go to Settings → Environment Variables and add:
    ```
    DATABASE_URL=postgresql://neondb_owner:npg_MlisGo3pyIc1@ep-delicate-river-aha074dk-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
@@ -114,10 +120,32 @@ The server already handles CORS, but make sure `FRONTEND_URL` in Vercel environm
 
 ## Troubleshooting
 
-- **Build fails**: Check that all dependencies are in `package.json` in the root or server directory
-- **API routes not working**: Verify `vercel.json` routes configuration
-- **Database connection errors**: Check that `DATABASE_URL` is correctly set in Vercel environment variables
-- **CORS errors**: Update `FRONTEND_URL` environment variable to match your Vercel deployment URL
+- **Build fails**: 
+  - Make sure `server/package.json` exists with all dependencies
+  - Check Vercel build logs for specific error messages
+  - Ensure Node.js version is 18+ (set in `server/package.json` engines field)
+  
+- **API routes not working**: 
+  - Verify `vercel.json` routes configuration
+  - Check that `server/index.js` exports the app correctly (`export default app`)
+  
+- **Static files not loading (404 errors)**:
+  - Ensure `vercel.json` includes all necessary files in `includeFiles`
+  - Check that static file routes are defined in `server/index.js`
+  - Verify file paths are correct (relative to server directory)
+  
+- **Database connection errors**: 
+  - Check that `DATABASE_URL` is correctly set in Vercel environment variables
+  - Verify SSL settings in `server/db.js` are correct for Neon DB
+  
+- **CORS errors**: 
+  - Update `FRONTEND_URL` environment variable to match your Vercel deployment URL
+  - Or set CORS to allow all origins in production: `origin: true`
+  
+- **Module not found errors**:
+  - Make sure all dependencies are listed in `server/package.json`
+  - Vercel should automatically run `npm install` in the server directory
+  - If not, manually set Install Command in Vercel: `cd server && npm install`
 
 ## Testing the Deployment
 
