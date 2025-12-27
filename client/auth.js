@@ -38,8 +38,19 @@ async function handleLogin() {
 
   const endpoint = isRegisterMode ? '/register' : '/login';
   
-  // IMPORTANT: Use full backend URL
-  const backendUrl = 'http://localhost:5000';
+  // Use API_BASE from config.js (automatically detects localhost vs production)
+  // Fallback: if config.js didn't load, detect environment manually
+  let backendUrl = window.API_BASE;
+  if (!backendUrl) {
+    // Fallback detection if config.js didn't load
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
+      backendUrl = 'http://localhost:5000';
+    } else {
+      // Production (Vercel)
+      backendUrl = window.location.origin;
+    }
+  }
   const fullUrl = `${backendUrl}${endpoint}`;
   
   messageEl.textContent = isRegisterMode ? 'Creating account...' : 'Logging in...';
@@ -120,7 +131,7 @@ async function handleLogin() {
 // Test server connection
 async function testServerConnection() {
   try {
-    const testResponse = await fetch('http://localhost:5000');
+    const testResponse = await fetch(window.API_BASE || 'http://localhost:5000');
     console.log('Server test response:', testResponse.status);
     if (testResponse.ok) {
       const text = await testResponse.text();

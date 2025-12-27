@@ -254,6 +254,7 @@
     </div>
   </div>
 
+  <script src="config.js"></script>
   <script>
     const userInfoEl = document.getElementById('userInfo');
     const usernameEl = document.getElementById('username');
@@ -283,7 +284,8 @@
     if (!token) return;
 
     try {
-        const response = await fetch('http://localhost:5000/load-progress', {
+        const apiBase = window.API_BASE || 'http://localhost:5000';
+        const response = await fetch(`${apiBase}/load-progress`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

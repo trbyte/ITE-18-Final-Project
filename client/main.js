@@ -1,7 +1,8 @@
 // -------------------------
 // API & User Variables
 // -------------------------
-const API_BASE = "http://localhost:5000";
+// Use API_BASE from config.js, fallback to localhost for development
+const API_BASE = window.API_BASE || "http://localhost:5000";
 let token = "";
 let userId = "";
 let user = {};
