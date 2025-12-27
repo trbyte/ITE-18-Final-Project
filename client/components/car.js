@@ -206,160 +206,248 @@ export class CarController {
     }
   }
 
- triggerGameOver() {
-  if (this.isGameOver) return;
-  this.isGameOver = true;
-  
-  // Make sure we get the current score, not a cached one
-  const finalScore = Math.floor(this.mesh ? Math.max(0, this.mesh.position.z) : this.score);
-  
-  console.log('Game Over! Final Score:', finalScore); // Debug log
-  
-  // Show game over modal
-  const modal = document.getElementById('game-over-modal');
-  const finalScoreElement = document.getElementById('final-score');
-  
-  if (modal) {
-    // Make sure modal is properly positioned
-    modal.style.display = 'flex';
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100%';
-    modal.style.height = '100%';
-    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    modal.style.justifyContent = 'center';
-    modal.style.alignItems = 'center';
-    modal.style.zIndex = '9999'; // Very high z-index
-    
-    // Remove any existing celebration messages
-    const existingCelebration = modal.querySelector('.celebration-message');
-    if (existingCelebration) {
-      existingCelebration.remove();
-    }
-  }
-  
-  if (finalScoreElement) {
-    finalScoreElement.textContent = finalScore;
-  }
-  
-  // Save score to database and check for highscore
-  this.saveScoreToDB(finalScore).then(result => {
-    // If it was a new highscore, show celebration
-    if (result && result.isNewHighscore) {
-      this.showHighscoreCelebration(finalScore);
-    }
-  }).catch(error => {
-    console.error('Error saving score:', error);
-    // Fallback to localStorage check
-    this.checkLocalHighscore(finalScore);
-  });
-}
-
-checkLocalHighscore(finalScore) {
-  // Get current highscore from localStorage
-  const currentHighscore = parseInt(localStorage.getItem('gameHighscore')) || 0;
-  
-  // Check if this is a new highscore
-  if (finalScore > currentHighscore) {
-    // Update localStorage
-    localStorage.setItem('gameHighscore', finalScore.toString());
-    
-    // Show celebration
-    this.showHighscoreCelebration(finalScore);
-  }
-}
-
-showHighscoreCelebration(score) {
-  const modal = document.getElementById('game-over-modal');
-  if (!modal) return;
-  
-  // Create celebration message
-  const message = document.createElement('div');
-  message.className = 'celebration-message';
-  message.innerHTML = `
-    <div style="
-      background: linear-gradient(135deg, #FFD700, #FFA500);
-      color: #000;
-      padding: 15px;
-      border-radius: 10px;
-      margin: 15px 0;
-      text-align: center;
-      font-size: 1.2em;
-      border: 2px solid #000;
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-    ">
-      🎉 NEW HIGHSCORE! 🎉<br>
-      <strong style="font-size: 1.5em;">${score} points!</strong>
-    </div>
-  `;
-  
-  // Add to modal content
-  const modalContent = modal.querySelector('div');
-  if (modalContent) {
-    // Insert after the final score paragraph
-    const scoreParagraph = modalContent.querySelector('p:nth-child(3)'); // The paragraph with final score
-    if (scoreParagraph) {
-      modalContent.insertBefore(message, scoreParagraph.nextSibling);
-    } else {
-      // Fallback: insert before buttons
-      const buttons = modalContent.querySelector('button');
-      if (buttons) {
-        modalContent.insertBefore(message, buttons);
+  // ============ LOCALSTORAGE SAVING FUNCTION ============
+  saveToLocalStorage(score) {
+    try {
+      console.log('Saving to localStorage...');
+      
+      // Save with multiple keys to ensure dashboard finds it
+      const scoreStr = score.toString();
+      
+      // Primary key for dashboard
+      localStorage.setItem('lastSessionScore', scoreStr);
+      
+      // Secondary keys (backups)
+      localStorage.setItem('driveSmartLatestScore', scoreStr);
+      localStorage.setItem('latestScore', scoreStr);
+      localStorage.setItem('currentScore', scoreStr);
+      
+      // Save with timestamp
+      const scoreData = {
+        score: score,
+        timestamp: Date.now(),
+        date: new Date().toLocaleString()
+      };
+      localStorage.setItem('latestScoreData', JSON.stringify(scoreData));
+      
+      console.log('Score saved to localStorage:', score);
+      console.log('Keys saved: lastSessionScore, driveSmartLatestScore, latestScore, currentScore');
+      
+      // Verify the save
+      const savedScore = localStorage.getItem('lastSessionScore');
+      if (savedScore === scoreStr) {
+        console.log('✓ Verification PASSED: Score correctly saved to localStorage');
+      } else {
+        console.error('✗ Verification FAILED: localStorage save issue');
       }
+      
+      // Also check and update high score
+      this.updateLocalHighScore(score);
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+      return false;
     }
   }
-}
-  async saveScoreToDB(score) {
-  try {
-    const token = localStorage.getItem('gameToken');
-    const username = localStorage.getItem('gameUsername');
+
+  // ============ UPDATE LOCAL HIGH SCORE ============
+  updateLocalHighScore(score) {
+    try {
+      // Get current high score from localStorage
+      const currentHighScore = parseInt(localStorage.getItem('driveSmartHighScore') || '0');
+      const globalHighScore = parseInt(localStorage.getItem('gameHighscore') || '0');
+      
+      // Update if this score is higher
+      if (score > currentHighScore) {
+        localStorage.setItem('driveSmartHighScore', score.toString());
+        console.log('Updated driveSmartHighScore:', score);
+      }
+      
+      if (score > globalHighScore) {
+        localStorage.setItem('gameHighscore', score.toString());
+        console.log('Updated gameHighscore:', score);
+      }
+      
+      return score > currentHighScore || score > globalHighScore;
+    } catch (error) {
+      console.error('Error updating local high score:', error);
+      return false;
+    }
+  }
+
+  triggerGameOver() {
+    if (this.isGameOver) return;
+    this.isGameOver = true;
     
-    if (!token || !username) {
-      console.warn("Not logged in - score won't be saved");
-      return;
+    // Make sure we get the current score, not a cached one
+    const finalScore = Math.floor(this.mesh ? Math.max(0, this.mesh.position.z) : this.score);
+    
+    console.log('=========== GAME OVER ===========');
+    console.log('Final Score:', finalScore);
+    
+    // ============ CRITICAL: SAVE TO LOCALSTORAGE ============
+    const localStorageSaved = this.saveToLocalStorage(finalScore);
+    if (!localStorageSaved) {
+      console.warn('Could not save to localStorage. Dashboard may not show latest score.');
     }
     
-    console.log(`Saving score ${score} for ${username}`);
+    // Show game over modal
+    this.showGameOverModal(finalScore);
     
-    const response = await fetch('http://localhost:5000/api/save-score', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ 
-        score: parseInt(score)
-      })
+    // Save score to database and check for highscore
+    this.saveScoreToDB(finalScore).then(result => {
+      // If it was a new highscore, show celebration
+      if (result && result.isNewHighscore) {
+        this.showHighscoreCelebration(finalScore);
+      }
+    }).catch(error => {
+      console.error('Error saving score to database:', error);
+      // Fallback to localStorage check for highscore celebration
+      this.checkLocalHighscore(finalScore);
     });
     
-    if (response.ok) {
-      const result = await response.json();
-      console.log("Score saved to database:", result.message);
+    console.log('================================');
+  }
+
+  showGameOverModal(finalScore) {
+    const modal = document.getElementById('game-over-modal');
+    const finalScoreElement = document.getElementById('final-score');
+    
+    if (modal) {
+      // Make sure modal is properly positioned
+      modal.style.display = 'flex';
+      modal.style.position = 'fixed';
+      modal.style.top = '0';
+      modal.style.left = '0';
+      modal.style.width = '100%';
+      modal.style.height = '100%';
+      modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+      modal.style.justifyContent = 'center';
+      modal.style.alignItems = 'center';
+      modal.style.zIndex = '9999'; // Very high z-index
       
-      // Update final score display
-      const finalScoreElement = document.getElementById('final-score');
-      if (finalScoreElement) {
-        finalScoreElement.textContent = score;
-      }
-    } else {
-      const errorData = await response.json();
-      console.error("Failed to save score:", errorData.error);
-      
-      // Show error in game over modal
-      const finalScoreElement = document.getElementById('final-score');
-      if (finalScoreElement) {
-        finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Save failed: ${errorData.error || 'Server error'})</small>`;
+      // Remove any existing celebration messages
+      const existingCelebration = modal.querySelector('.celebration-message');
+      if (existingCelebration) {
+        existingCelebration.remove();
       }
     }
-  } catch (err) {
-    console.error("Network error saving score:", err);
     
-    // Show network error in game over modal
-    const finalScoreElement = document.getElementById('final-score');
     if (finalScoreElement) {
-      finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Network error - score not saved)</small>`;
+      finalScoreElement.textContent = finalScore;
     }
   }
+
+  checkLocalHighscore(finalScore) {
+    // Get current highscore from localStorage
+    const currentHighscore = parseInt(localStorage.getItem('gameHighscore')) || 0;
+    
+    // Check if this is a new highscore
+    if (finalScore > currentHighscore) {
+      // Update localStorage
+      localStorage.setItem('gameHighscore', finalScore.toString());
+      
+      // Show celebration
+      this.showHighscoreCelebration(finalScore);
+    }
+  }
+
+  showHighscoreCelebration(score) {
+    const modal = document.getElementById('game-over-modal');
+    if (!modal) return;
+    
+    // Create celebration message
+    const message = document.createElement('div');
+    message.className = 'celebration-message';
+    message.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, #FFD700, #FFA500);
+        color: #000;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 15px 0;
+        text-align: center;
+        font-size: 1.2em;
+        border: 2px solid #000;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      ">
+        NEW HIGHSCORE! <br>
+        <strong style="font-size: 1.5em;">${score} points!</strong>
+      </div>
+    `;
+    
+    // Add to modal content
+    const modalContent = modal.querySelector('div');
+    if (modalContent) {
+      // Insert after the final score paragraph
+      const scoreParagraph = modalContent.querySelector('p:nth-child(3)'); // The paragraph with final score
+      if (scoreParagraph) {
+        modalContent.insertBefore(message, scoreParagraph.nextSibling);
+      } else {
+        // Fallback: insert before buttons
+        const buttons = modalContent.querySelector('button');
+        if (buttons) {
+          modalContent.insertBefore(message, buttons);
+        }
+      }
+    }
+  }
+
+  async saveScoreToDB(score) {
+    try {
+      const token = localStorage.getItem('gameToken');
+      const username = localStorage.getItem('gameUsername');
+      
+      if (!token || !username) {
+        console.warn("Not logged in - score won't be saved to database");
+        return { isNewHighscore: false };
+      }
+      
+      console.log(`Saving score ${score} for ${username}`);
+      
+      const response = await fetch('http://localhost:5000/api/save-score', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          score: parseInt(score)
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Score saved to database:", result.message);
+        
+        // Update final score display
+        const finalScoreElement = document.getElementById('final-score');
+        if (finalScoreElement) {
+          finalScoreElement.textContent = score;
+        }
+        
+        return result; // Return result which may contain isNewHighscore
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to save score to database:", errorData.error);
+        
+        // Show error in game over modal
+        const finalScoreElement = document.getElementById('final-score');
+        if (finalScoreElement) {
+          finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Save failed: ${errorData.error || 'Server error'})</small>`;
+        }
+        return { isNewHighscore: false };
+      }
+    } catch (err) {
+      console.error("Network error saving score to database:", err);
+      
+      // Show network error in game over modal
+      const finalScoreElement = document.getElementById('final-score');
+      if (finalScoreElement) {
+        finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Network error - score not saved to server)</small>`;
+      }
+      return { isNewHighscore: false };
+    }
   }
 }

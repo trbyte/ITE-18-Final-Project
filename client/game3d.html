@@ -43,24 +43,6 @@
       border: 2px solid #ffd700;
       pointer-events: none;
     }
-    #game-over-modal {
-      display: none; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0,0,0,0.8); 
-      justify-content: center; 
-      align-items: center; 
-      z-index: 1000;
-    }
-    #game-over-modal div {
-      background: white; 
-      padding: 30px; 
-      border-radius: 10px; 
-      text-align: center;
-    }
   </style>
 </head>
 <body>
@@ -78,15 +60,15 @@
 
   <!-- Game Over Modal -->
   <div id="game-over-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;">
-  <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
-    <h2>Game Over!</h2>
-    <p>You hit a barrier!</p>
-    <p>Final Score: <span id="final-score">0</span></p>
-    <p id="new-highscore-message" style="color: #ffd700; font-weight: bold; display: none;">🎉 NEW HIGH SCORE! 🎉</p>
-    <button onclick="window.location.href='game3d.html'">Play Again</button>
-    <button onclick="window.location.href='game.html'" style="margin-left: 10px;">Back to Dashboard</button>
+    <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
+      <h2>Game Over!</h2>
+      <p>You hit a barrier!</p>
+      <p>Final Score: <span id="final-score">0</span></p>
+      <p id="new-highscore-message" style="color: #ffd700; font-weight: bold; display: none;">🎉 NEW HIGH SCORE! 🎉</p>
+      <button onclick="window.location.href='game3d.html'">Play Again</button>
+      <button onclick="window.location.href='game.html'" style="margin-left: 10px;">Back to Dashboard</button>
+    </div>
   </div>
-</div>
 
   <!-- Three.js -->
   <script type="importmap">
@@ -113,49 +95,92 @@
     let currentScore = 0;
     let highScore = 0;
     let isGameOver = false;
+    let gameStarted = false;
     
-    // Load high score from localStorage
-    function loadHighScore() {
-      const savedHighScore = localStorage.getItem('driveSmartHighScore');
-      highScore = savedHighScore ? parseInt(savedHighScore) : 0;
-      document.getElementById('highscore-value').textContent = highScore;
+    // Load high score from server
+    async function loadHighScore() {
+      const token = localStorage.getItem('gameToken');
+      try {
+        const response = await fetch('http://localhost:5000/load-progress', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          highScore = parseInt(data.score) || 0;
+          document.getElementById('highscore-value').textContent = highScore;
+        }
+      } catch (err) {
+        console.error("Failed to load high score:", err);
+      }
     }
     
-    // Update high score
-    function updateHighScore(newScore) {
-      if (newScore > highScore) {
-        highScore = newScore;
-        localStorage.setItem('driveSmartHighScore', highScore.toString());
-        document.getElementById('highscore-value').textContent = highScore;
-        return true; // New high score achieved
+    // Check for collisions
+    function checkCollisions() {
+      if (!carController || !carController.mesh || !barrierManager || isGameOver || !gameStarted) {
+        return false;
       }
-      return false; // No new high score
+      
+      const barriers = barrierManager.getBarriers();
+      if (!barriers || barriers.length === 0) return false;
+      
+      const carBox = new THREE.Box3().setFromObject(carController.mesh);
+      
+      for (const barrier of barriers) {
+        if (!barrier.mesh) continue;
+        
+        const barrierBox = new THREE.Box3().setFromObject(barrier.mesh);
+        if (carBox.intersectsBox(barrierBox)) {
+          return true; // Collision detected
+        }
+      }
+      return false;
     }
     
     // Game over function
     function gameOver() {
-      if (isGameOver) return;
-      
-      isGameOver = true;
-      
-      // Update final score
-      const finalScore = currentScore;
-      document.getElementById('final-score').textContent = finalScore;
-      
-      // Check for new high score
-      const isNewHighScore = updateHighScore(finalScore);
-      
-      // Show new high score message if achieved
-      if (isNewHighScore) {
-        document.getElementById('new-highscore-message').style.display = 'block';
-      }
-      
-      // Show game over modal
-      document.getElementById('game-over-modal').style.display = 'flex';
-      
-      // Send score to server (optional)
-      sendScoreToServer(finalScore);
+    if (isGameOver) return;
+    isGameOver = true;
+
+    const finalScore = currentScore;
+    
+    // *** ADD THIS CODE TO SAVE TO LOCALSTORAGE ***
+    console.log(`🎮 Game Over! Saving score ${finalScore} to localStorage...`);
+    
+    // Save with MULTIPLE keys to ensure dashboard finds it
+    localStorage.setItem('lastSessionScore', finalScore.toString());
+    localStorage.setItem('driveSmartLatestScore', finalScore.toString());
+    localStorage.setItem('latestScore', finalScore.toString());
+    localStorage.setItem('currentScore', finalScore.toString());
+    localStorage.setItem('sessionScore', finalScore.toString());
+    
+    // Log what we saved
+    console.log(`✅ Score ${finalScore} saved to localStorage with keys:`);
+    console.log(`   - lastSessionScore: ${finalScore}`);
+    console.log(`   - driveSmartLatestScore: ${finalScore}`);
+    console.log(`   - latestScore: ${finalScore}`);
+    
+    // Update high score if needed
+    if (finalScore > highScore) {
+        localStorage.setItem('driveSmartHighScore', finalScore.toString());
+        console.log(`🏆 New high score! Saved to driveSmartHighScore: ${finalScore}`);
     }
+    
+    // ... rest of your existing gameOver code ...
+    document.getElementById('final-score').textContent = finalScore;
+    
+    // Check for new high score
+    const isNewHighScore = finalScore > highScore;
+    if (isNewHighScore) {
+        highScore = finalScore;
+        document.getElementById('new-highscore-message').style.display = 'block';
+        document.getElementById('highscore-value').textContent = highScore;
+    }
+    
+    document.getElementById('game-over-modal').style.display = 'flex';
+    
+    // Send score to server
+    sendScoreToServer(finalScore);
+}
     
     // Send score to server
     async function sendScoreToServer(score) {
@@ -181,6 +206,14 @@
     }
     
     function init() {
+      // Check authentication
+      const token = localStorage.getItem('gameToken');
+      if (!token) {
+        alert("Please login first!");
+        window.location.href = 'index.html';
+        return;
+      }
+      
       loader = new GLTFLoader();
       
       // Load high score at start
@@ -221,9 +254,12 @@
       
       roadManager.loadStreetRoad();
       
+      // Load barriers after a short delay to ensure everything is ready
       setTimeout(() => {
         barrierManager.loadBarriers();
-      }, 500);
+        gameStarted = true;
+        console.log("Game started. Barriers loaded.");
+      }, 1000);
       
       window.addEventListener("resize", () => {
         sceneManager.onWindowResize();
@@ -259,9 +295,8 @@
           currentScore = Math.floor(distanceTraveled);
           document.getElementById('score-value').textContent = currentScore;
           
-          // Check if car hit a barrier (you need to implement collision detection)
-          // This is a placeholder - you should use your actual collision detection
-          if (carController.isCollidingWithBarrier && !isGameOver) {
+          // Check for collisions
+          if (checkCollisions()) {
             gameOver();
           }
         }
@@ -270,11 +305,17 @@
       sceneManager.render();
     }
     
-    window.addEventListener('load', init);
+    // Add keyboard shortcut for testing (press 'T' to trigger game over)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 't' || e.key === 'T') {
+        if (!isGameOver) {
+          console.log("Test: Triggering game over");
+          gameOver();
+        }
+      }
+    });
     
-    // Expose functions to global scope if needed
-    window.gameOver = gameOver;
-    window.updateHighScore = updateHighScore;
+    window.addEventListener('load', init);
   </script>
 </body>
 </html>

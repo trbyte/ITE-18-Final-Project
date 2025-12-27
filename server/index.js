@@ -114,45 +114,30 @@ app.post("/login", async (req, res) => {
 app.post("/api/save-score", authenticateToken, async (req, res) => {
   const { score } = req.body;
   const userId = req.user.id;
-  const scoreValue = parseInt(score);
 
   try {
-    // 1. Fetch the existing record first
-    const checkResult = await db.query(
-      "SELECT score FROM player_progress WHERE user_id = $1",
-      [userId]
-    );
-
-    if (checkResult.rows.length > 0) {
-      const currentPersonalBest = checkResult.rows[0].score;
-
-      // 2. Only update the score column if the NEW score is HIGHER
-      if (scoreValue > currentPersonalBest) {
+    // 1. Get current PB
+    const result = await db.query("SELECT score FROM player_progress WHERE user_id = $1", [userId]);
+    
+    if (result.rows.length > 0) {
+      const currentPB = result.rows[0].score;
+      // 2. Only UPDATE if new score is higher
+      if (score > currentPB) {
         await db.query(
-          `UPDATE player_progress 
-           SET score = $1, last_played = CURRENT_TIMESTAMP 
-           WHERE user_id = $2`,
-          [scoreValue, userId]
+          "UPDATE player_progress SET score = $1, last_played = CURRENT_TIMESTAMP WHERE user_id = $2",
+          [score, userId]
         );
-        return res.json({ success: true, message: "New Personal Best!", isNewRecord: true });
       } else {
-        // 3. If it's NOT a personal best, just update the timestamp
-        await db.query(
-          "UPDATE player_progress SET last_played = CURRENT_TIMESTAMP WHERE user_id = $1",
-          [userId]
-        );
-        return res.json({ success: true, message: "Score saved", isNewRecord: false });
+        // Just update the 'last_played' timestamp
+        await db.query("UPDATE player_progress SET last_played = CURRENT_TIMESTAMP WHERE user_id = $1", [userId]);
       }
     } else {
-      // First time playing: Insert the score
-      await db.query(
-        "INSERT INTO player_progress (user_id, score, last_played) VALUES ($1, $2, CURRENT_TIMESTAMP)",
-        [userId, scoreValue]
-      );
-      res.json({ success: true, message: "Initial score saved" });
+      // First time player
+      await db.query("INSERT INTO player_progress (user_id, score) VALUES ($1, $2)", [userId, score]);
     }
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Database error" });
+    res.status(500).send("Server Error");
   }
 });
 
@@ -204,17 +189,14 @@ app.get("/load-progress", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await db.query("SELECT score, last_played FROM player_progress WHERE user_id = $1", [userId]);
-    if (result.rows.length === 0) {
-      return res.json({ score: 0, last_played: null });
-    }
-    
+    if (result.rows.length === 0) return res.json({ score: 0, last_played: null });
+
     res.json({
       score: result.rows[0].score,
-      // Fixes the 8-hour timezone gap for Philippines
-      last_played: result.rows[0].last_played ? new Date(result.rows[0].last_played).toISOString() : null
+      last_played: result.rows[0].last_played // This is the full timestamp
     });
   } catch (err) {
-    res.status(500).send("Server error");
+    res.status(500).send("Error");
   }
 });
 
