@@ -1,4 +1,3 @@
-// Road Component - Handles road loading and recycling
 import * as THREE from 'three';
 
 export class RoadManager {
@@ -24,7 +23,6 @@ export class RoadManager {
 
     const tryLoadPath = (pathIndex) => {
       if (pathIndex >= possiblePaths.length) {
-        document.getElementById('status').textContent = 'Error: Could not find model file';
         return;
       }
 
@@ -113,14 +111,7 @@ export class RoadManager {
           this.createGround();
           this.onRoadLoaded(this.streetRoad, size);
         },
-        (progress) => {
-          if (progress.lengthComputable) {
-            const percent = (progress.loaded / progress.total * 100).toFixed(0);
-            document.getElementById('status').textContent = `Loading: ${percent}%`;
-          } else {
-            document.getElementById('status').textContent = 'Loading model...';
-          }
-        },
+        undefined,
         (error) => {
           tryLoadPath(pathIndex + 1);
         }
@@ -132,12 +123,71 @@ export class RoadManager {
 
   createGround() {
     const groundGeometry = new THREE.PlaneGeometry(10000, 10000);
-    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x90EE90 });
+    
+    // Create procedural grass texture
+    const grassTexture = this.createProceduralGrassTexture();
+    grassTexture.wrapS = THREE.RepeatWrapping;
+    grassTexture.wrapT = THREE.RepeatWrapping;
+    grassTexture.repeat.set(50, 50);
+    
+    const groundMaterial = new THREE.MeshStandardMaterial({ 
+      map: grassTexture,
+      roughness: 0.9,
+      metalness: 0
+    });
+    
     this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
     this.ground.rotation.x = -Math.PI / 2;
     this.ground.position.y = -0.1;
     this.ground.receiveShadow = true;
     this.scene.add(this.ground);
+  }
+
+  createProceduralGrassTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Fill with base grass color
+    ctx.fillStyle = '#2d5016';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw grass blades
+    const grassColors = ['#3d6b1f', '#4a7c2c', '#2d5016', '#5a8c3d', '#2a4a0f'];
+    
+    for (let i = 0; i < 5000; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const height = Math.random() * 15 + 5;
+      const width = Math.random() * 1.5 + 0.5;
+      const angle = Math.random() * 0.3 - 0.15;
+      
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      
+      ctx.fillStyle = grassColors[Math.floor(Math.random() * grassColors.length)];
+      ctx.fillRect(-width / 2, 0, width, height);
+      
+      // Add highlight to grass blade
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(-width / 4, 0, width / 2, height * 0.6);
+      
+      ctx.restore();
+    }
+
+    // Add some dirt/shadow variation
+    for (let i = 0; i < 2000; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const size = Math.random() * 8 + 2;
+      
+      ctx.fillStyle = `rgba(0, 0, 0, ${Math.random() * 0.15})`;
+      ctx.fillRect(x, y, size, size);
+    }
+
+    return new THREE.CanvasTexture(canvas);
   }
 
   recycleRoadSegments(cameraZ) {

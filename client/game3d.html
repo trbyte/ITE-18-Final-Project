@@ -15,28 +15,6 @@
       width: 100%;
       height: 100vh;
     }
-    #info {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: white;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 10px;
-      border-radius: 5px;
-      z-index: 100;
-    }
-    #controls {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: white;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 15px;
-      border-radius: 5px;
-      text-align: center;
-      z-index: 100;
-    }
     #scoreboard {
       position: absolute; 
       top: 20px; 
@@ -73,20 +51,6 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-  
-  <div id="info">
-    <div>Test Game - Street Road Model</div>
-    <div id="editor-mode" style="font-weight: bold; color: #ffeb3b;"></div>
-    <div id="status">Loading...</div>
-  </div>
-  
-  <div id="controls">
-    <div>W: Forward | S: Backward | A: Left | D: Right</div>
-    <div>Mouse Wheel: Zoom In/Out | Left Click + Drag: Pan Left/Right/Up/Down (Rotate View) | Right/Middle Mouse: Move Camera</div>
-    <div id="editor-controls" style="display: none; margin-top: 10px; font-weight: bold; color: #ffeb3b;">
-      EDITOR MODE: Drag objects to position | Press P to export layout | Click object to select
-    </div>
-  </div>
 
   <div id="scoreboard">
     Score: <span id="score-value">0</span>
@@ -115,18 +79,12 @@
   <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-    import * as Editor from './editor.js';
     import { SceneManager } from './components/scene.js';
     import { RoadManager } from './components/road.js';
     import { CarController } from './components/car.js';
     import { StreetlightManager } from './components/streetlight.js';
     import { CameraController } from './components/camera.js';
     import { BarrierManager } from './components/barrier.js';
-    
-    // Editor Mode is now configured in editor.js
-    const EDITOR_MODE = Editor.EDITOR_MODE;
-    window.EDITOR_MODE = EDITOR_MODE;
-    window.Editor = Editor;
   
     let sceneManager, roadManager, streetlightManager, cameraController, carController, barrierManager;
     let loader;
@@ -144,61 +102,34 @@
       const camera = sceneManager.getCamera();
       const renderer = sceneManager.getRenderer();
       
-      // Initialize editor with scene, camera, and renderer
-      Editor.initEditor(scene, camera, renderer);
-      
-      // Initialize road manager
       roadManager = new RoadManager(scene, loader, (streetRoad, size) => {
         const roadLength = Math.max(size.x, size.z);
         if (cameraController) {
           cameraController.setInitialPosition(roadLength);
         }
-        document.getElementById('status').textContent = 'Street Road loaded successfully!';
         if (streetlightManager) {
           streetlightManager.loadStreetLight();
         }
       });
       
-      // Initialize streetlight manager
       streetlightManager = new StreetlightManager(scene, loader);
       
-      // Initialize car controller FIRST so barrier manager can reference it
       carController = new CarController(scene, loader, (car) => {
-        // Car loaded callback
-        if (window.EDITOR_MODE && window.Editor) {
-          window.Editor.makeDraggable(car.mesh, 'car');
-        }
-        // Connect car to camera controller for 3rd person view
         if (cameraController) {
           cameraController.setCar(carController);
         }
-        document.getElementById('status').textContent = 'Car loaded successfully!';
-        
-        console.log('Car loaded, barriers count:', carController.barriers.length);
       });
       
-      // Initialize barrier manager - PASS CAR CONTROLLER
       barrierManager = new BarrierManager(scene, loader, carController);
       
-      // Initialize camera controller
       cameraController = new CameraController(camera, roadManager, streetlightManager, barrierManager);
       cameraController.setupKeyboardControls();
       
-      // Load the road (which will trigger streetlight loading)
-      document.getElementById('status').textContent = 'Loading Street Road model...';
       roadManager.loadStreetRoad();
       
-      // Load barriers after a short delay to ensure car is initialized
       setTimeout(() => {
         barrierManager.loadBarriers();
-        console.log('Barriers loading started...');
       }, 500);
-      
-      // Setup editor handlers (keyboard and mouse)
-      Editor.setupEditorHandlers(canvas);
-      
-      // Update UI based on editor mode
-      Editor.updateEditorModeUI();
       
       window.addEventListener("resize", () => {
         sceneManager.onWindowResize();
@@ -212,66 +143,33 @@
     function animate() {
       requestAnimationFrame(animate);
       
-      // Update camera controller
       if (cameraController) {
         cameraController.update();
       }
       
-      // Safety check: Only run car logic if carController and its mesh are loaded
+      if (sceneManager) {
+        sceneManager.updateSkybox();
+      }
+      
       if (carController && carController.mesh && !carController.isGameOver) {
-        // Get barriers from barrier manager
         const barriers = barrierManager ? barrierManager.getBarriers() : [];
         
-        // Debug logging (remove after testing)
-        if (barriers.length > 0 && Math.random() < 0.01) { // Log 1% of frames
-          console.log(`Debug - Barriers: ${barriers.length}, Car barriers: ${carController.barriers.length}`);
-          console.log('Car position:', carController.mesh.position);
-          console.log('First barrier position:', barriers[0].position);
-          
-          // Calculate distance to first barrier
-          const distance = carController.mesh.position.distanceTo(barriers[0].position);
-          console.log(`Distance to first barrier: ${distance.toFixed(2)}`);
-        }
-        
-        // Pass barriers into the update for collision checking
         if (carController.update) {
           carController.update(sceneManager.getCamera(), barriers);
         }
         
-        // Update the Scoreboard based on car's internal score
         if (carController.score !== undefined) {
           document.getElementById('score-value').textContent = carController.score;
         } else {
-          // Fallback to Z-distance if score not implemented
           const scoreValue = Math.floor(carController.mesh.position.z);
           document.getElementById('score-value').textContent = Math.max(0, scoreValue);
         }
       }
       
-      // Render the scene
       sceneManager.render();
     }
     
-    // Start the game when page loads
     window.addEventListener('load', init);
-    
-    // Add debug function to check barrier positions
-    window.debugBarriers = function() {
-      if (!barrierManager) {
-        console.log('Barrier manager not initialized');
-        return;
-      }
-      const barriers = barrierManager.getBarriers();
-      console.log(`Total barriers: ${barriers.length}`);
-      barriers.forEach((barrier, i) => {
-        console.log(`Barrier ${i}:`, barrier.position);
-      });
-      
-      if (carController) {
-        console.log('Car position:', carController.mesh.position);
-        console.log('Car barriers array length:', carController.barriers.length);
-      }
-    };
   </script>
 </body>
 </html>

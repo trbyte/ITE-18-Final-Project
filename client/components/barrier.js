@@ -1,13 +1,11 @@
-// Barrier Component - Handles concrete barrier loading and placement
 import * as THREE from 'three';
-import * as Editor from '../editor.js';
 
 export class BarrierManager {
-  constructor(scene, loader, carController = null) { // Add carController parameter
+  constructor(scene, loader, carController = null) {
     this.scene = scene;
     this.loader = loader;
     this.barriers = [];
-    this.carController = carController; // Store reference to car
+    this.carController = carController;
   }
 
   loadBarriers() {
@@ -28,29 +26,13 @@ export class BarrierManager {
         const fileName = pathParts.pop();
         this.loader.setPath(pathParts.join('/') + '/');
         this.loader.load(fileName, (gltf) => {
-          console.log('Barriers loaded successfully');
           this.setupBarriers(gltf.scene);
-        }, (progress) => {
-          if (progress.lengthComputable) {
-            console.log('Loading barriers:', (progress.loaded / progress.total * 100).toFixed(0) + '%');
-          }
-        }, (error) => {
-          console.error('Failed to load barriers from:', modelPath, error);
-          tryLoadPath(pathIndex + 1);
-        });
+        }, undefined, () => tryLoadPath(pathIndex + 1));
       } else {
         this.loader.setPath('../assets/models/concrete_barriers/');
         this.loader.load(modelPath, (gltf) => {
-          console.log('Barriers loaded successfully');
           this.setupBarriers(gltf.scene);
-        }, (progress) => {
-          if (progress.lengthComputable) {
-            console.log('Loading barriers:', (progress.loaded / progress.total * 100).toFixed(0) + '%');
-          }
-        }, (error) => {
-          console.error('Failed to load barriers from:', modelPath, error);
-          tryLoadPath(pathIndex + 1);
-        });
+        }, undefined, () => tryLoadPath(pathIndex + 1));
       }
     };
 
@@ -58,19 +40,6 @@ export class BarrierManager {
   }
 
   setupBarriers(barrierScene) {
-    // Log all node names to debug
-    console.log('All nodes in barrier scene:');
-    const allNodes = [];
-    barrierScene.traverse((child) => {
-      if (child.name) {
-        allNodes.push(child.name);
-        console.log('Node found:', child.name, 'Type:', child.constructor.name, 'Has mesh:', child.isMesh);
-      }
-    });
-    console.log('Total nodes with names:', allNodes.length);
-
-    // Find barrier models: 1 (M_Barrier - Cube.001), 2 (M_Barrier2 - Cube.002), 
-    // 3 (M_BarrierRed - Cube.003), 4 (M_BarrierRed - Cube.003), 5 (M_BarrierPlsatic - Cube.005), 6 (M_BarrierMetal - Cube.006)
     let barrier1Node = null;
     let barrier2Node = null;
     let barrier3Node = null;
@@ -78,81 +47,64 @@ export class BarrierManager {
     let barrier5Node = null;
     let barrier6Node = null;
 
-    // First, try to find by exact name
     barrierScene.traverse((child) => {
       if (child.name === 'Cube.001') {
         barrier1Node = child;
-        console.log('Found barrier 1 by name:', child.name);
       }
       if (child.name === 'Cube.002') {
         barrier2Node = child;
-        console.log('Found barrier 2 by name:', child.name);
       }
       if (child.name === 'Cube.003') {
         barrier3Node = child;
-        barrier4Node = child; // Also reference as model 4
-        console.log('Found barrier 3/4 by name:', child.name);
+        barrier4Node = child;
       }
       if (child.name === 'Cube.005') {
         barrier5Node = child;
-        console.log('Found barrier 5 by name:', child.name);
       }
       if (child.name === 'Cube.006') {
         barrier6Node = child;
-        console.log('Found barrier 6 by name:', child.name);
       }
     });
 
-    // If not found, try to find by material name and get the parent group
     if (!barrier1Node || !barrier2Node || !barrier3Node || !barrier4Node || !barrier5Node || !barrier6Node) {
       barrierScene.traverse((child) => {
         if (child.isMesh) {
           const materialName = child.material?.name || '';
           
-          // Find barrier 1 - look for M_Barrier material (not Barrier2, Metal, Plastic, Red, Tall, or Fence)
           if (materialName === 'M_Barrier' && !barrier1Node) {
             let parent = child.parent;
-            // Go up the hierarchy to find the Cube.001 node
             while (parent && parent !== barrierScene) {
               if (parent.name === 'Cube.001') {
                 barrier1Node = parent;
-                console.log('Found barrier 1 by material, parent:', parent.name);
                 break;
               }
               parent = parent.parent;
             }
-            // If still not found, use the mesh's parent directly
             if (!barrier1Node && child.parent) {
               barrier1Node = child.parent;
-              console.log('Found barrier 1 using mesh parent:', child.parent.name);
             }
           }
           
-          // Find barrier 2 - look for M_Barrier2 material
           if (materialName === 'M_Barrier2' && !barrier2Node) {
             let parent = child.parent;
             while (parent && parent !== barrierScene) {
               if (parent.name === 'Cube.002') {
                 barrier2Node = parent;
-                console.log('Found barrier 2 by material, parent:', parent.name);
                 break;
               }
               parent = parent.parent;
             }
             if (!barrier2Node && child.parent) {
               barrier2Node = child.parent;
-              console.log('Found barrier 2 using mesh parent:', child.parent.name);
             }
           }
           
-          // Find barrier 3/4 - look for M_BarrierRed material
           if (materialName === 'M_BarrierRed' && (!barrier3Node || !barrier4Node)) {
             let parent = child.parent;
             while (parent && parent !== barrierScene) {
               if (parent.name === 'Cube.003') {
                 barrier3Node = parent;
                 barrier4Node = parent;
-                console.log('Found barrier 3/4 by material, parent:', parent.name);
                 break;
               }
               parent = parent.parent;
@@ -160,53 +112,138 @@ export class BarrierManager {
             if ((!barrier3Node || !barrier4Node) && child.parent) {
               barrier3Node = child.parent;
               barrier4Node = child.parent;
-              console.log('Found barrier 3/4 using mesh parent:', child.parent.name);
             }
           }
           
-          // Find barrier 5 - look for M_BarrierPlsatic material
           if (materialName === 'M_BarrierPlsatic' && !barrier5Node) {
             let parent = child.parent;
             while (parent && parent !== barrierScene) {
               if (parent.name === 'Cube.005') {
                 barrier5Node = parent;
-                console.log('Found barrier 5 by material, parent:', parent.name);
                 break;
               }
               parent = parent.parent;
             }
             if (!barrier5Node && child.parent) {
               barrier5Node = child.parent;
-              console.log('Found barrier 5 using mesh parent:', child.parent.name);
             }
           }
           
-          // Find barrier 6 - look for M_BarrierMetal material
           if (materialName === 'M_BarrierMetal' && !barrier6Node) {
             let parent = child.parent;
             while (parent && parent !== barrierScene) {
               if (parent.name === 'Cube.006') {
                 barrier6Node = parent;
-                console.log('Found barrier 6 by material, parent:', parent.name);
                 break;
               }
               parent = parent.parent;
             }
             if (!barrier6Node && child.parent) {
               barrier6Node = child.parent;
-              console.log('Found barrier 6 using mesh parent:', child.parent.name);
             }
           }
         }
       });
     }
 
-    // Generate random positions for barriers with collision detection
-    const minDistance = 10.0; // Increased minimum distance between barriers (was 5.0)
-    const placedPositions = []; // Track all placed barrier positions
-    const zRange = { min: 5.0, max: 100.0 }; // Extended Z range for more spread (was 5.0-50.0)
+    const minDistance = 20.0;
+    const placedPositions = [];
+    const zRange = { min: 5.0, max: 100.0 };
     
-    // Helper function to check if a position is too close to existing barriers
+    const CAR_WIDTH = 1.5;
+    const ROAD_LEFT_EDGE = -1.5;
+    const ROAD_RIGHT_EDGE = 1.5;
+    const MIN_PASSAGE_WIDTH = CAR_WIDTH + 0.5;
+    const Z_TOLERANCE = 2.0;
+    const MIN_Z_SPACING_SAME_SIDE = CAR_WIDTH + 6.5;
+    const MIN_Z_SPACING_OPPOSITE_SIDE = CAR_WIDTH + 5.0;
+    const X_TOLERANCE = 3.0;
+    const LEFT_SIDE_THRESHOLD = -1.0;
+    const RIGHT_SIDE_THRESHOLD = 1.0;
+    
+    const hasClearPath = (z, existingPositions) => {
+      const nearbyBarriers = existingPositions.filter(pos => 
+        Math.abs(pos.z - z) < Z_TOLERANCE + 1.0
+      );
+      
+      if (nearbyBarriers.length === 0) return true;
+      
+      const BARRIER_HALF_WIDTH = 0.6;
+      const roadWidth = ROAD_RIGHT_EDGE - ROAD_LEFT_EDGE;
+      const requiredPassageWidth = MIN_PASSAGE_WIDTH;
+      let hasPath = false;
+      const testStep = 0.05;
+      
+      for (let testX = ROAD_LEFT_EDGE; testX <= ROAD_RIGHT_EDGE - requiredPassageWidth; testX += testStep) {
+        let pathClear = true;
+        
+        for (const pos of nearbyBarriers) {
+          const barrierLeft = pos.x - BARRIER_HALF_WIDTH;
+          const barrierRight = pos.x + BARRIER_HALF_WIDTH;
+          const pathLeft = testX;
+          const pathRight = testX + requiredPassageWidth;
+          
+          if (!(barrierRight < pathLeft || barrierLeft > pathRight)) {
+            pathClear = false;
+            break;
+          }
+        }
+        
+        if (pathClear) {
+          hasPath = true;
+          break;
+        }
+      }
+      
+      if (!hasPath) {
+        let barriersOnRoad = false;
+        for (const pos of nearbyBarriers) {
+          const barrierLeft = pos.x - BARRIER_HALF_WIDTH;
+          const barrierRight = pos.x + BARRIER_HALF_WIDTH;
+          
+          if (barrierRight > ROAD_LEFT_EDGE && barrierLeft < ROAD_RIGHT_EDGE) {
+            barriersOnRoad = true;
+            break;
+          }
+        }
+        
+        if (!barriersOnRoad) {
+          return true;
+        }
+      }
+      
+      return hasPath;
+    };
+    
+    // Helper function to check if barriers on the same side are too close in Z direction
+    const hasEnoughZSpacingOnSameSide = (x, z, existingPositions, minZSpacing) => {
+      for (const pos of existingPositions) {
+        if (Math.abs(pos.x - x) < X_TOLERANCE) {
+          if (Math.abs(pos.z - z) < minZSpacing) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+    
+    const hasEnoughZSpacingOnOppositeSide = (x, z, existingPositions, minZSpacing) => {
+      const isLeftSide = x < LEFT_SIDE_THRESHOLD;
+      const isRightSide = x > RIGHT_SIDE_THRESHOLD;
+      
+      for (const pos of existingPositions) {
+        const otherIsLeftSide = pos.x < LEFT_SIDE_THRESHOLD;
+        const otherIsRightSide = pos.x > RIGHT_SIDE_THRESHOLD;
+        
+        if ((isLeftSide && otherIsRightSide) || (isRightSide && otherIsLeftSide)) {
+          if (Math.abs(pos.z - z) < minZSpacing) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+    
     const isPositionValid = (x, z, existingPositions, minDist) => {
       for (const pos of existingPositions) {
         const distance = Math.sqrt((x - pos.x) ** 2 + (z - pos.z) ** 2);
@@ -217,36 +254,65 @@ export class BarrierManager {
       return true;
     };
     
-    // Helper function to generate a valid random position
-    const generateValidPosition = (side, existingPositions, minDist, maxAttempts = 200) => {
+    const BARRIER_HALF_WIDTH = 0.6;
+    const SAFE_DISTANCE_FROM_ROAD = 0;
+    
+    const generateValidPosition = (side, existingPositions, minDist, maxAttempts = 300) => {
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         let x, z;
         if (side === 'right') {
-          x = 1.0 + Math.random() * 2.0; // Random between 1.0 and 3.0 (right sidewalk)
+          x = ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD + Math.random() * (3.0 - ROAD_RIGHT_EDGE - SAFE_DISTANCE_FROM_ROAD);
+          x = Math.max(ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD, Math.min(x, 3.0));
         } else if (side === 'left') {
-          x = -3.0 + Math.random() * 2.0; // Random between -3.0 and -1.0 (left sidewalk)
+          x = -3.0 + Math.random() * (ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD - (-3.0));
+          x = Math.max(-3.0, Math.min(x, ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD));
         } else {
-          // Random side
-          x = (Math.random() > 0.5 ? 1.0 : -3.0) + Math.random() * 2.0;
+          if (Math.random() > 0.5) {
+            x = ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD + Math.random() * (3.0 - ROAD_RIGHT_EDGE - SAFE_DISTANCE_FROM_ROAD);
+            x = Math.max(ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD, Math.min(x, 3.0));
+          } else {
+            x = -3.0 + Math.random() * (ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD - (-3.0));
+            x = Math.max(-3.0, Math.min(x, ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD));
+          }
         }
-        z = zRange.min + Math.random() * (zRange.max - zRange.min); // Extended range
+        z = zRange.min + Math.random() * (zRange.max - zRange.min);
         
-        if (isPositionValid(x, z, existingPositions, minDist)) {
+        if (isPositionValid(x, z, existingPositions, minDist) &&
+            hasClearPath(z, existingPositions) &&
+            hasEnoughZSpacingOnSameSide(x, z, existingPositions, MIN_Z_SPACING_SAME_SIDE) &&
+            hasEnoughZSpacingOnOppositeSide(x, z, existingPositions, MIN_Z_SPACING_OPPOSITE_SIDE)) {
           return { x, z };
         }
       }
-      // If we can't find a valid position after max attempts, return a position anyway
+      for (let attempt = 0; attempt < 100; attempt++) {
+        let x, z;
+        if (Math.random() > 0.5) {
+          x = ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD + Math.random() * (3.0 - ROAD_RIGHT_EDGE - SAFE_DISTANCE_FROM_ROAD);
+          x = Math.max(ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD, Math.min(x, 3.0));
+        } else {
+          x = -3.0 + Math.random() * (ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD - (-3.0));
+          x = Math.max(-3.0, Math.min(x, ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD));
+        }
+        z = zRange.min + Math.random() * (zRange.max - zRange.min);
+        
+        if (hasClearPath(z, existingPositions) &&
+            hasEnoughZSpacingOnSameSide(x, z, existingPositions, MIN_Z_SPACING_SAME_SIDE) &&
+            hasEnoughZSpacingOnOppositeSide(x, z, existingPositions, MIN_Z_SPACING_OPPOSITE_SIDE)) {
+          return { x, z };
+        }
+      }
+      const lastResortX = Math.random() > 0.5 
+        ? ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD + Math.random() * 0.5
+        : -3.0 + Math.random() * 0.5;
       return { 
-        x: (Math.random() > 0.5 ? 1.0 : -3.0) + Math.random() * 2.0, 
+        x: lastResortX, 
         z: zRange.min + Math.random() * (zRange.max - zRange.min)
       };
     };
     
-    // Generate positions for all barriers (30 total barriers)
     const totalBarriers = 30;
     const barrierPositions = [];
     
-    // First barrier on right, second on left, rest random
     for (let i = 0; i < totalBarriers; i++) {
       let side = 'random';
       if (i === 0) side = 'right';
@@ -266,7 +332,6 @@ export class BarrierManager {
       { node: barrier6Node, rotation: { x: 14.529866022852804, y: 21.991148575128545, z: 4.71238898038469 }, scale: null }
     ];
 
-    // Place all barriers using a loop
     for (let i = 0; i < totalBarriers; i++) {
       const configIndex = i % barrierConfigs.length;
       const config = barrierConfigs[configIndex];
@@ -276,7 +341,6 @@ export class BarrierManager {
         const barrierName = `barrier_${i + 1}`;
         const pos = barrierPositions[i];
         
-        console.log(`Placing ${barrierName}, clone has ${barrierClone.children.length} children`);
         this.placeBarrier(
           barrierClone,
           barrierName,
@@ -284,14 +348,11 @@ export class BarrierManager {
           config.rotation,
           config.scale
         );
-      } else {
-        console.warn(`Barrier model ${configIndex + 1} not found for barrier ${i + 1}!`);
       }
     }
   }
 
-   placeBarrier(barrier, name, position, rotation, scale = null) {
-    // Setup barrier mesh
+  placeBarrier(barrier, name, position, rotation, scale = null) {
     barrier.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
@@ -315,57 +376,41 @@ export class BarrierManager {
       }
     });
 
-    // Reset position and rotation before calculating size
     barrier.position.set(0, 0, 0);
     barrier.rotation.set(0, 0, 0);
     barrier.scale.set(1, 1, 1);
 
-    // Apply custom scale if provided, otherwise calculate scale automatically
     if (scale) {
       barrier.scale.set(scale.x, scale.y, scale.z);
-      console.log(`Barrier ${name} using custom scale:`, scale);
     } else {
-      // Calculate size and scale appropriately
       const box = new THREE.Box3().setFromObject(barrier);
       const size = box.getSize(new THREE.Vector3());
       const maxDimension = Math.max(size.x, size.y, size.z);
       
-      console.log(`Barrier ${name} size:`, size, 'maxDimension:', maxDimension);
-      
-      // Scale barrier to appropriate size (target size around 1-2 units)
       if (maxDimension > 0) {
-        const targetSize = 1.5; // Target height/width around 1.5 units
+        const targetSize = 1.5;
         const scaleValue = targetSize / maxDimension;
         barrier.scale.set(scaleValue, scaleValue, scaleValue);
-        console.log(`Barrier ${name} scaled by:`, scaleValue);
       }
     }
 
-    // Apply rotation
     barrier.rotation.set(rotation.x, rotation.y, rotation.z);
     
-    // Set position on the sidewalk (y position should be on ground level)
-    // Adjust y based on barrier height if y is 0 in position
     if (position.y === 0) {
       const scaledBox = new THREE.Box3().setFromObject(barrier);
       const scaledSize = scaledBox.getSize(new THREE.Vector3());
-      const yPosition = scaledSize.y / 2; // Place bottom of barrier on ground
+      const yPosition = scaledSize.y / 2;
       barrier.position.set(position.x, yPosition, position.z);
     } else {
       barrier.position.set(position.x, position.y, position.z);
     }
     
-    console.log(`Barrier ${name} placed at:`, barrier.position, 'rotation:', barrier.rotation, 'scale:', barrier.scale);
-    
-    // Store barrier for recycling
     this.barriers.push(barrier);
 
     if (this.carController) {
       this.carController.barriers.push(barrier);
     }
     
-    // Register and make draggable
-    Editor.makeDraggable(barrier, name);
     this.scene.add(barrier);
   }
 
@@ -373,18 +418,137 @@ export class BarrierManager {
     if (this.barriers.length === 0) return;
 
     const recycleThreshold = 5;
-    const minDistance = 10.0; // Same as initial placement
-    const zRange = { min: 5.0, max: 100.0 }; // Same as initial placement
-    const aheadDistance = 50.0; // Distance ahead of camera to maintain barrier density
+    const minDistance = 25.0;
+    const zRange = { min: 7.0, max: 40.0 };
+    const aheadDistance = 50.0;
+    
+    const CAR_WIDTH = 1.5;
+    const ROAD_LEFT_EDGE = -1.5;
+    const ROAD_RIGHT_EDGE = 1.5;
+    const MIN_PASSAGE_WIDTH = CAR_WIDTH + 0.5;
+    const Z_TOLERANCE = 1.5;
+    const MIN_Z_SPACING_SAME_SIDE = CAR_WIDTH + 6.0;
+    const MIN_Z_SPACING_OPPOSITE_SIDE = CAR_WIDTH + 4.0;
+    const X_TOLERANCE = 2.5;
+    const LEFT_SIDE_THRESHOLD = -1.0;
+    const RIGHT_SIDE_THRESHOLD = 1.0;
+    const BARRIER_HALF_WIDTH_RECYCLE = 0.6;
+    const SAFE_DISTANCE_FROM_ROAD_RECYCLE = -0.3;
+    
+    const hasClearPath = (z, existingPositions) => {
+      const nearbyBarriers = existingPositions.filter(pos => 
+        Math.abs(pos.z - z) < Z_TOLERANCE + 1.0
+      );
+      
+      if (nearbyBarriers.length === 0) return true;
+      
+      const BARRIER_HALF_WIDTH = 0.6;
+      const roadWidth = ROAD_RIGHT_EDGE - ROAD_LEFT_EDGE;
+      const requiredPassageWidth = MIN_PASSAGE_WIDTH;
+      
+      // Test multiple paths across the road to ensure at least one is clear
+      let hasPath = false;
+      const testStep = 0.05; // Smaller step for more thorough checking
+      
+      for (let testX = ROAD_LEFT_EDGE; testX <= ROAD_RIGHT_EDGE - requiredPassageWidth; testX += testStep) {
+        let pathClear = true;
+        
+        // Check if this path is blocked by any nearby barrier
+        for (const pos of nearbyBarriers) {
+          // Calculate barrier's actual extent (position ± half width)
+          const barrierLeft = pos.x - BARRIER_HALF_WIDTH;
+          const barrierRight = pos.x + BARRIER_HALF_WIDTH;
+          const pathLeft = testX;
+          const pathRight = testX + requiredPassageWidth;
+          
+          // Check if barrier overlaps with the path
+          if (!(barrierRight < pathLeft || barrierLeft > pathRight)) {
+            // Barrier overlaps with this path
+            pathClear = false;
+            break;
+          }
+        }
+        
+        if (pathClear) {
+          hasPath = true;
+          break;
+        }
+      }
+      
+      if (!hasPath) {
+        let barriersOnRoad = false;
+        for (const pos of nearbyBarriers) {
+          const barrierLeft = pos.x - BARRIER_HALF_WIDTH;
+          const barrierRight = pos.x + BARRIER_HALF_WIDTH;
+          
+          if (barrierRight > ROAD_LEFT_EDGE && barrierLeft < ROAD_RIGHT_EDGE) {
+            barriersOnRoad = true;
+            break;
+          }
+        }
+        
+        if (!barriersOnRoad) {
+          return true;
+        }
+      }
+      
+      return hasPath;
+    };
+    
+    const hasEnoughZSpacingOnSameSide = (x, z, existingPositions, minZSpacing) => {
+      for (const pos of existingPositions) {
+        if (Math.abs(pos.x - x) < X_TOLERANCE) {
+          if (Math.abs(pos.z - z) < minZSpacing) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+    
+    // Helper function to check if barriers on opposing sides are too close in Z direction
+    const hasEnoughZSpacingOnOppositeSide = (x, z, existingPositions, minZSpacing) => {
+      const isLeftSide = x < LEFT_SIDE_THRESHOLD;
+      const isRightSide = x > RIGHT_SIDE_THRESHOLD;
+      
+      for (const pos of existingPositions) {
+        const otherIsLeftSide = pos.x < LEFT_SIDE_THRESHOLD;
+        const otherIsRightSide = pos.x > RIGHT_SIDE_THRESHOLD;
+        
+        // Check if barriers are on opposite sides
+        if ((isLeftSide && otherIsRightSide) || (isRightSide && otherIsLeftSide)) {
+          // Check if barriers are too close in Z direction (intersecting)
+          if (Math.abs(pos.z - z) < minZSpacing) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+    
+    const isPositionValid = (x, z, existingPositions, minDist) => {
+      for (const pos of existingPositions) {
+        const distance = Math.sqrt((x - pos.x) ** 2 + (z - pos.z) ** 2);
+        if (distance < minDist) {
+          return false;
+        }
+      }
+      return true;
+    };
 
     for (let i = 0; i < this.barriers.length; i++) {
       const barrier = this.barriers[i];
       const barrierBox = new THREE.Box3().setFromObject(barrier);
       const barrierMaxZ = barrierBox.max.z;
 
-      // If barrier is behind the camera
       if (barrierMaxZ < cameraZ - recycleThreshold) {
-        // Find the frontmost Z position of all other barriers
+        const existingPositions = [];
+        for (let j = 0; j < this.barriers.length; j++) {
+          if (j !== i) {
+            existingPositions.push({ x: this.barriers[j].position.x, z: this.barriers[j].position.z });
+          }
+        }
+        
         let frontmostZ = -Infinity;
         for (let j = 0; j < this.barriers.length; j++) {
           if (j !== i) {
@@ -395,47 +559,54 @@ export class BarrierManager {
           }
         }
 
-        // Calculate target area ahead of camera to maintain density
-        // Place barriers in the range [cameraZ + aheadDistance, cameraZ + aheadDistance + zRange range]
         const targetMinZ = cameraZ + aheadDistance;
         const targetMaxZ = targetMinZ + (zRange.max - zRange.min);
-
-        // Generate a new position in the target area with consistent spacing
         let newX, newZ;
         let attempts = 0;
-        const maxAttempts = 200;
+        const maxAttempts = 300;
         let validPosition = false;
 
         while (!validPosition && attempts < maxAttempts) {
-          // Random side (left or right sidewalk)
           const side = Math.random() > 0.5 ? 'right' : 'left';
           if (side === 'right') {
-            newX = 1.0 + Math.random() * 2.0; // Random between 1.0 and 3.0 (right sidewalk)
+            newX = ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD_RECYCLE + Math.random() * (3.0 - ROAD_RIGHT_EDGE - SAFE_DISTANCE_FROM_ROAD_RECYCLE);
+            newX = Math.max(ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD_RECYCLE, Math.min(newX, 3.0));
           } else {
-            newX = -3.0 + Math.random() * 2.0; // Random between -3.0 and -1.0 (left sidewalk)
+            newX = -3.0 + Math.random() * (ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD_RECYCLE - (-3.0));
+            newX = Math.max(-3.0, Math.min(newX, ROAD_LEFT_EDGE - SAFE_DISTANCE_FROM_ROAD_RECYCLE));
           }
           
-          // Place in target area to maintain density (similar to initial placement range)
           newZ = targetMinZ + Math.random() * (targetMaxZ - targetMinZ);
           
-          // Check if position is valid (far enough from other barriers)
-          validPosition = true;
-          for (let j = 0; j < this.barriers.length; j++) {
-            if (j !== i) {
-              const otherPos = this.barriers[j].position;
-              const distance = Math.sqrt((newX - otherPos.x) ** 2 + (newZ - otherPos.z) ** 2);
-              if (distance < minDistance) {
-                validPosition = false;
-                break;
-              }
-            }
+          if (isPositionValid(newX, newZ, existingPositions, minDistance) &&
+              hasClearPath(newZ, existingPositions) &&
+              hasEnoughZSpacingOnSameSide(newX, newZ, existingPositions, MIN_Z_SPACING_SAME_SIDE) &&
+              hasEnoughZSpacingOnOppositeSide(newX, newZ, existingPositions, MIN_Z_SPACING_OPPOSITE_SIDE)) {
+            validPosition = true;
           }
           attempts++;
         }
 
-        // If we couldn't find a valid position, place it anyway with minimum spacing from frontmost
         if (!validPosition) {
-          newX = (Math.random() > 0.5 ? 1.0 : -3.0) + Math.random() * 2.0;
+          for (let attempt = 0; attempt < 100; attempt++) {
+            newX = (Math.random() > 0.5 ? 1.0 : -3.0) + Math.random() * 2.0;
+            newZ = targetMinZ + Math.random() * (targetMaxZ - targetMinZ);
+            
+            if (hasClearPath(newZ, existingPositions) &&
+                hasEnoughZSpacingOnSameSide(newX, newZ, existingPositions, MIN_Z_SPACING_SAME_SIDE) &&
+                hasEnoughZSpacingOnOppositeSide(newX, newZ, existingPositions, MIN_Z_SPACING_OPPOSITE_SIDE)) {
+              validPosition = true;
+              break;
+            }
+          }
+        }
+        
+        if (!validPosition) {
+          if (Math.random() > 0.5) {
+            newX = ROAD_RIGHT_EDGE + SAFE_DISTANCE_FROM_ROAD_RECYCLE + Math.random() * 0.5;
+          } else {
+            newX = -3.0 + Math.random() * 0.5;
+          }
           if (frontmostZ === -Infinity) {
             newZ = targetMinZ;
           } else {
@@ -443,10 +614,9 @@ export class BarrierManager {
           }
         }
 
-        // Update barrier position
         const scaledBox = new THREE.Box3().setFromObject(barrier);
         const scaledSize = scaledBox.getSize(new THREE.Vector3());
-        const yPosition = scaledSize.y / 2; // Place bottom of barrier on ground
+        const yPosition = scaledSize.y / 2;
         
         barrier.position.set(newX, yPosition, newZ);
       }

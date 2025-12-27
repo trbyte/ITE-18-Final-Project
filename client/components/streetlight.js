@@ -1,19 +1,15 @@
-// Streetlight Component - Handles streetlight loading
 import * as THREE from 'three';
-import * as Editor from '../editor.js';
 
 export class StreetlightManager {
   constructor(scene, loader) {
     this.scene = scene;
     this.loader = loader;
-    
-    // Streetlight position constants
+    this.streetlights = [];
+    this.mirrorStreetlights = [];
     this.STREETLIGHT_X_REGULAR = 0.7659052966593223;
     this.STREETLIGHT_X_MIRROR = -0.8350271700107539;
     this.STREETLIGHT_Y = 0.08464134976573123;
     this.STREETLIGHT_SPACING = 15;
-    
-    // Model paths to try
     this.possiblePaths = [
       'scene.gltf',
       '../assets/models/bridge_street_light_3/scene.gltf',
@@ -28,28 +24,21 @@ export class StreetlightManager {
       this.setupStreetLightMesh(streetLight);
       streetLight.scale.multiplyScalar(0.01);
 
-      // Create regular streetlights: z=0, 15, 30, 45, 60, 75
-      const zPositions = [0, 15, 30, 45, 60, 75];
+      const zPositions = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165];
       zPositions.forEach((zPos, index) => {
-        const streetlightIndex = index + 1;
         if (zPos === 0) {
           streetLight.position.set(this.STREETLIGHT_X_REGULAR, this.STREETLIGHT_Y, zPos);
-          Editor.makeDraggable(streetLight, 'streetlight_1');
+          this.streetlights.push(streetLight);
           this.scene.add(streetLight);
         } else {
-          this.loadStreetLightAtZ(zPos, streetlightIndex);
+          this.loadStreetLightAtZ(zPos, index + 1);
         }
       });
 
-      // Create mirror streetlights: z=4, 19, 34, 49, 64, 79
-      const mirrorZPositions = [4, 19, 34, 49, 64, 79];
+      const mirrorZPositions = [4, 19, 34, 49, 64, 79, 94, 109, 124, 139, 154, 169];
       mirrorZPositions.forEach((zPos, index) => {
         this.loadStreetLightAtZWithName(zPos, `streetlight_mirror_${index + 1}`);
       });
-
-      if (!Editor.EDITOR_MODE) {
-        Editor.loadLayout();
-      }
     });
   }
 
@@ -72,9 +61,11 @@ export class StreetlightManager {
 
       if (isMirror) {
         newStreetLight.rotation.y = Math.PI;
+        this.mirrorStreetlights.push(newStreetLight);
+      } else {
+        this.streetlights.push(newStreetLight);
       }
 
-      Editor.makeDraggable(newStreetLight, name);
       this.scene.add(newStreetLight);
     });
   }
@@ -131,6 +122,14 @@ export class StreetlightManager {
       Y: this.STREETLIGHT_Y,
       SPACING: this.STREETLIGHT_SPACING
     };
+  }
+
+  getStreetlights() {
+    return this.streetlights;
+  }
+
+  getMirrorStreetlights() {
+    return this.mirrorStreetlights;
   }
 }
 
