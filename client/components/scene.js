@@ -1,10 +1,9 @@
-// Scene Component - Handles scene setup, lighting, and renderer
 import * as THREE from 'three';
 
 export class SceneManager {
   constructor(canvas) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87CEEB);
+    this.setupSkybox();
     
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -20,6 +19,61 @@ export class SceneManager {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.setupLighting();
+  }
+
+  setupSkybox() {
+    const skyTexture = this.createProceduralSkyTexture();
+    const skyGeometry = new THREE.SphereGeometry(450, 32, 32);
+    const skyMaterial = new THREE.MeshBasicMaterial({
+      map: skyTexture,
+      side: THREE.BackSide
+    });
+    this.skyMesh = new THREE.Mesh(skyGeometry, skyMaterial);
+    this.scene.add(this.skyMesh);
+  }
+  
+  updateSkybox() {
+    // Make sky follow camera position so it's always around the player
+    if (this.skyMesh && this.camera) {
+      this.skyMesh.position.copy(this.camera.position);
+    }
+  }
+
+  createProceduralSkyTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#1e3c72');
+    gradient.addColorStop(0.4, '#2e5c9a');
+    gradient.addColorStop(0.7, '#87ceeb');
+    gradient.addColorStop(1, '#e8f4f8');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    this.drawCloud(ctx, 150, 120, 80, 40);
+    this.drawCloud(ctx, 500, 150, 100, 50);
+    this.drawCloud(ctx, 850, 100, 70, 35);
+    this.drawCloud(ctx, 300, 250, 90, 45);
+    this.drawCloud(ctx, 700, 200, 85, 42);
+
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  drawCloud(ctx, x, y, width, height) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, width, height, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x - width * 0.4, y, width * 0.6, height * 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + width * 0.4, y, width * 0.6, height * 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   setupLighting() {
@@ -55,22 +109,6 @@ export class SceneManager {
     });
 
     canvas.addEventListener("mousedown", (e) => {
-      // Editor Mode: Check if object is being dragged
-      if (window.EDITOR_MODE && window.Editor) {
-        const draggableObjects = window.Editor.getDraggableObjects();
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, this.camera);
-
-        const intersects = raycaster.intersectObjects(draggableObjects);
-        if (intersects.length > 0) {
-          // User clicked on a draggable object, let DragControls handle it
-          return;
-        }
-      }
-
       // Only handle right/middle mouse for camera panning
       if (e.button === 1 || e.button === 2) {
         isPanning = true;
@@ -80,15 +118,6 @@ export class SceneManager {
     });
 
     canvas.addEventListener("mousemove", (e) => {
-      // Editor Mode: Don't pan camera while dragging objects
-      if (window.EDITOR_MODE && window.Editor) {
-        const draggableObjects = window.Editor.getDraggableObjects();
-        const isDragging = draggableObjects.some(obj => obj.userData?.isDragging);
-        if (isDragging) {
-          return; // Let DragControls handle the drag
-        }
-      }
-
       if (isPanning) {
         const deltaX = e.clientX - panStart.x;
         const deltaY = e.clientY - panStart.y;
