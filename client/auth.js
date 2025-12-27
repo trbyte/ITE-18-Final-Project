@@ -94,7 +94,7 @@ async function handleLogin() {
 
           // Redirect after 1 second
           setTimeout(() => {
-            window.location.href = 'menu.html';
+            window.location.href = 'game.html';
           }, 1000);
         } else {
           console.error('❌ Missing token or username in response:', data);
