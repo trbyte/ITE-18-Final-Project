@@ -145,9 +145,10 @@
     isGameOver = true;
 
     const finalScore = currentScore;
+    document.getElementById('score-value').textContent = finalScore;
     
     // *** ADD THIS CODE TO SAVE TO LOCALSTORAGE ***
-    console.log(`🎮 Game Over! Saving score ${finalScore} to localStorage...`);
+    console.log(`Game Over! Saving score ${finalScore} to localStorage...`);
     
     // Save with MULTIPLE keys to ensure dashboard finds it
     localStorage.setItem('lastSessionScore', finalScore.toString());
@@ -157,7 +158,7 @@
     localStorage.setItem('sessionScore', finalScore.toString());
     
     // Log what we saved
-    console.log(`✅ Score ${finalScore} saved to localStorage with keys:`);
+    console.log(`Score ${finalScore} saved to localStorage with keys:`);
     console.log(`   - lastSessionScore: ${finalScore}`);
     console.log(`   - driveSmartLatestScore: ${finalScore}`);
     console.log(`   - latestScore: ${finalScore}`);
@@ -165,7 +166,7 @@
     // Update high score if needed
     if (finalScore > highScore) {
         localStorage.setItem('driveSmartHighScore', finalScore.toString());
-        console.log(`🏆 New high score! Saved to driveSmartHighScore: ${finalScore}`);
+        console.log(`New high score! Saved to driveSmartHighScore: ${finalScore}`);
     }
     
     // ... rest of your existing gameOver code ...
