@@ -9,13 +9,19 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// -----------------------------
+// MIDDLEWARE
+// -----------------------------
 app.use(cors());
 app.use(express.json());
 
+// * UPDATED: SERVE THE CLIENT FOLDER *
+// "../client" means: Go up one level, then into the 'client' folder.
+app.use(express.static('../client'));
+
 // Password Validation Helper
 function validatePassword(password) {
-  if (password.length < 8) return "Password must be at least 8 characters long";
+  if (password.length < 😎 return "Password must be at least 8 characters long";
   if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
   if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
   if (!/[0-9]/.test(password)) return "Password must contain at least one number";
@@ -119,9 +125,8 @@ app.post("/api/save-score", authenticateToken, async (req, res) => {
   const { score } = req.body;
   const userId = req.user.id;
 
-  console.log(`Saving score for user ID ${userId}: ${score}`);
+  console.log(Saving score for user ID ${userId}: ${score});
 
-  // Validate input
   if (score === undefined || score === null) {
     return res.status(400).json({ error: "Score is required" });
   }
@@ -132,14 +137,12 @@ app.post("/api/save-score", authenticateToken, async (req, res) => {
   }
 
   try {
-    // First check if user progress exists
     const checkResult = await db.query(
       "SELECT * FROM player_progress WHERE user_id = $1",
       [userId]
     );
 
     if (checkResult.rows.length > 0) {
-      // Update existing record
       await db.query(
         `UPDATE player_progress 
          SET score = $1, last_played = CURRENT_TIMESTAMP 
@@ -147,7 +150,6 @@ app.post("/api/save-score", authenticateToken, async (req, res) => {
         [scoreValue, userId]
       );
     } else {
-      // Insert new record
       await db.query(
         `INSERT INTO player_progress (user_id, score, last_played) 
          VALUES ($1, $2, CURRENT_TIMESTAMP)`,
@@ -182,7 +184,6 @@ app.get("/load-progress", authenticateToken, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      // No previous progress found
       return res.json({ 
         level: 1,
         score: 0,
@@ -204,12 +205,12 @@ app.get("/load-progress", authenticateToken, async (req, res) => {
 });
 
 // -----------------------------
-// TEST ROUTES
+// ROUTES
 // -----------------------------
 
-// Test route to check if server is running
+// Redirect root URL to game.html
 app.get("/", (req, res) => {
-  res.send("Road Safety Simulator Server is running");
+  res.redirect('/game.html');
 });
 
 // Test database connection
@@ -238,8 +239,8 @@ app.get("/health", (req, res) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 Database URL: ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`);
+  console.log(🚀 Server running on http://localhost:${PORT});
+  console.log(👉 Open http://localhost:${PORT} to play!);
 });
 
 // Error handling
