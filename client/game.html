@@ -171,6 +171,30 @@
     <div id="scoreValue" class="score-value">0</div>
     <div id="scoreDate" class="score-date">Never played before</div>
   </div>
+
+  <div class="highscore-display" style="
+  background: rgba(0,0,0,0.6);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  border: 2px solid rgba(255,215,0,0.3);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+">
+  <div style="font-size: 1rem; margin-bottom: 8px; opacity: 0.9; color: #FFD700;">
+    Personal Best
+  </div>
+  <div id="highscoreValue" style="
+    font-size: clamp(2.5rem, 8vw, 3rem);
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 0 0 8px rgba(255,215,0,0.5);
+    line-height: 1;
+    margin: 5px 0;
+  ">0</div>
+</div>
   
   <div class="dashboard">
     <div class="card" id="playCard">
@@ -212,57 +236,47 @@
     }
 
     async function loadLatestScore() {
-      const token = localStorage.getItem('gameToken');
-      const username = localStorage.getItem('gameUsername');
-      
-      if (!token || !username) {
-        scoreValueEl.textContent = '0';
-        scoreDateEl.textContent = 'Please login';
-        return;
-      }
+  const token = localStorage.getItem('gameToken');
+  const scoreValueEl = document.getElementById('scoreValue');
+  const highscoreValueEl = document.getElementById('highscoreValue');
+  
+  if (!token) return;
 
-      try {
-        scoreValueEl.textContent = 'Loading';
-        scoreValueEl.classList.add('loading');
-        
-        const response = await fetch('http://localhost:5000/load-progress', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          scoreValueEl.classList.remove('loading');
-          scoreValueEl.textContent = data.score || '0';
-          
-          if (data.last_played) {
-    const date = new Date(data.last_played); // Converts UTC string to 10:17 AM local time
+  try {
+    // Call the existing progress endpoint
+    const response = await fetch('http://localhost:5000/load-progress', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     
-    const options = {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true // This converts 10:17 to 10:17 AM
-    };
-
-    // 'en-GB' ensures DD/MM/YYYY format
-    scoreDateEl.textContent = `Last: ${date.toLocaleString('en-GB', options)}`;
-} else {
-    scoreDateEl.textContent = 'No previous games';
-}
-        } else {
-          scoreValueEl.classList.remove('loading');
-          scoreValueEl.textContent = 'Error';
-          scoreDateEl.textContent = 'Failed to load';
-        }
-      } catch (err) {
-        console.error('Network error:', err);
-        scoreValueEl.classList.remove('loading');
-        scoreValueEl.textContent = 'Offline';
-        scoreDateEl.textContent = 'Server not reachable';
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Since the server now only saves the highest score in the 'score' column,
+      // data.score represents the Personal Best.
+      const personalBest = data.score || 0;
+      
+      // Update both UI elements
+      highscoreValueEl.textContent = personalBest;
+      
+      // Note: If you want to show the 'latest' score from the very last game session,
+      // you would need to store that separately in the database or localStorage.
+      // For now, this ensures the gold 'Personal Best' section stays at the highest.
+      scoreValueEl.textContent = personalBest; 
+      
+      // Fix Timezone display
+      if (data.last_played) {
+        const date = new Date(data.last_played);
+        const options = { 
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', hour12: true 
+        };
+        document.getElementById('scoreDate').textContent = `Record Set: ${date.toLocaleString('en-GB', options)}`;
       }
     }
+  } catch (err) {
+    console.error('Fetch error:', err);
+  }
+}
 
     function logout() {
       if (confirm('Logout?')) {

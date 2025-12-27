@@ -114,101 +114,107 @@ app.post("/login", async (req, res) => {
 app.post("/api/save-score", authenticateToken, async (req, res) => {
   const { score } = req.body;
   const userId = req.user.id;
-
-  if (score === undefined || score === null) {
-    return res.status(400).json({ error: "Score is required" });
-  }
-
   const scoreValue = parseInt(score);
-  if (isNaN(scoreValue)) {
-    return res.status(400).json({ error: "Score must be a number" });
-  }
 
   try {
+    // 1. Fetch the existing record first
     const checkResult = await db.query(
-      "SELECT * FROM player_progress WHERE user_id = $1",
+      "SELECT score FROM player_progress WHERE user_id = $1",
       [userId]
     );
 
     if (checkResult.rows.length > 0) {
-      await db.query(
-        `UPDATE player_progress 
-         SET score = $1, last_played = CURRENT_TIMESTAMP 
-         WHERE user_id = $2`,
-        [scoreValue, userId]
-      );
+      const currentPersonalBest = checkResult.rows[0].score;
+
+      // 2. Only update the score column if the NEW score is HIGHER
+      if (scoreValue > currentPersonalBest) {
+        await db.query(
+          `UPDATE player_progress 
+           SET score = $1, last_played = CURRENT_TIMESTAMP 
+           WHERE user_id = $2`,
+          [scoreValue, userId]
+        );
+        return res.json({ success: true, message: "New Personal Best!", isNewRecord: true });
+      } else {
+        // 3. If it's NOT a personal best, just update the timestamp
+        await db.query(
+          "UPDATE player_progress SET last_played = CURRENT_TIMESTAMP WHERE user_id = $1",
+          [userId]
+        );
+        return res.json({ success: true, message: "Score saved", isNewRecord: false });
+      }
     } else {
+      // First time playing: Insert the score
       await db.query(
-        `INSERT INTO player_progress (user_id, score, last_played) 
-         VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+        "INSERT INTO player_progress (user_id, score, last_played) VALUES ($1, $2, CURRENT_TIMESTAMP)",
         [userId, scoreValue]
       );
+      res.json({ success: true, message: "Initial score saved" });
     }
-
-    res.json({ 
-      success: true, 
-      message: "Score saved successfully",
-      score: scoreValue 
-    });
-
   } catch (err) {
-    console.error("Error saving score:", err);
-    res.status(500).json({ error: "Failed to save score to database" });
+    res.status(500).json({ error: "Database error" });
   }
 });
 
-app.get("/load-progress", authenticateToken, async (req, res) => {
+// GET USER HIGHSCORE
+app.get("/api/highscore", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
     const result = await db.query(
       `SELECT 
-         level, 
-         score, 
-         last_played as last_played_utc,
-         -- Convert UTC to Manila time in the query
-         (last_played AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila') as last_played_manila
-       FROM player_progress 
+         highscore,
+         score as last_score,
+         last_played,
+         -- Rank among all users
+         (SELECT COUNT(*) + 1 
+          FROM player_progress pp2 
+          WHERE pp2.highscore > pp.highscore) as rank
+       FROM player_progress pp
        WHERE user_id = $1`,
       [userId]
     );
 
     if (result.rows.length === 0) {
       return res.json({ 
-        level: 1, 
-        score: 0, 
-        last_played_utc: null,
-        last_played_manila: null,
-        last_played_formatted: null
+        highscore: 0,
+        last_score: 0,
+        rank: null,
+        message: "No games played yet"
       });
     }
 
-    const progress = result.rows[0];
-    let formattedDate = null;
-    if (progress.last_played_manila) {
-      const manilaDate = new Date(progress.last_played_manila);
-      formattedDate = manilaDate.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-    }
-
+    const data = result.rows[0];
     res.json({
-      score: progress.score || 0,
-      last_played_utc: progress.last_played_utc ? 
-        new Date(progress.last_played_utc).toISOString() : null,
-      last_played_manila: progress.last_played_manila ? 
-        new Date(progress.last_played_manila).toISOString() : null,
-      last_played_formatted: formattedDate
+      highscore: data.highscore || 0,
+      last_score: data.score || 0,
+      rank: data.rank,
+      last_played: data.last_played ? 
+        new Date(data.last_played).toISOString() : null
     });
 
   } catch (err) {
-    console.error("Error loading progress:", err);
-    res.status(500).json({ error: "Failed to load progress" });
+    console.error("Error loading highscore:", err);
+    res.status(500).json({ error: "Failed to load highscore" });
+  }
+});
+
+
+app.get("/load-progress", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await db.query("SELECT score, last_played FROM player_progress WHERE user_id = $1", [userId]);
+    if (result.rows.length === 0) {
+      return res.json({ score: 0, last_played: null });
+    }
+    
+    res.json({
+      score: result.rows[0].score,
+      // Fixes the 8-hour timezone gap for Philippines
+      last_played: result.rows[0].last_played ? new Date(result.rows[0].last_played).toISOString() : null
+    });
+  } catch (err) {
+    res.status(500).send("Server error");
   }
 });
 

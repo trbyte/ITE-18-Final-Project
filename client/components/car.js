@@ -206,29 +206,110 @@ export class CarController {
     }
   }
 
-  triggerGameOver() {
+ triggerGameOver() {
   if (this.isGameOver) return;
   this.isGameOver = true;
   
-  // Get current score from the car's scoring system
-  const finalScore = this.score;
+  // Make sure we get the current score, not a cached one
+  const finalScore = Math.floor(this.mesh ? Math.max(0, this.mesh.position.z) : this.score);
   
-  // Show the game over modal immediately
+  console.log('Game Over! Final Score:', finalScore); // Debug log
+  
+  // Show game over modal
   const modal = document.getElementById('game-over-modal');
   const finalScoreElement = document.getElementById('final-score');
   
   if (modal) {
+    // Make sure modal is properly positioned
     modal.style.display = 'flex';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    modal.style.justifyContent = 'center';
+    modal.style.alignItems = 'center';
+    modal.style.zIndex = '9999'; // Very high z-index
+    
+    // Remove any existing celebration messages
+    const existingCelebration = modal.querySelector('.celebration-message');
+    if (existingCelebration) {
+      existingCelebration.remove();
+    }
   }
   
   if (finalScoreElement) {
     finalScoreElement.textContent = finalScore;
   }
   
-  // Save score to database (async - don't wait for it)
-  this.saveScoreToDB(finalScore);
+  // Save score to database and check for highscore
+  this.saveScoreToDB(finalScore).then(result => {
+    // If it was a new highscore, show celebration
+    if (result && result.isNewHighscore) {
+      this.showHighscoreCelebration(finalScore);
+    }
+  }).catch(error => {
+    console.error('Error saving score:', error);
+    // Fallback to localStorage check
+    this.checkLocalHighscore(finalScore);
+  });
 }
 
+checkLocalHighscore(finalScore) {
+  // Get current highscore from localStorage
+  const currentHighscore = parseInt(localStorage.getItem('gameHighscore')) || 0;
+  
+  // Check if this is a new highscore
+  if (finalScore > currentHighscore) {
+    // Update localStorage
+    localStorage.setItem('gameHighscore', finalScore.toString());
+    
+    // Show celebration
+    this.showHighscoreCelebration(finalScore);
+  }
+}
+
+showHighscoreCelebration(score) {
+  const modal = document.getElementById('game-over-modal');
+  if (!modal) return;
+  
+  // Create celebration message
+  const message = document.createElement('div');
+  message.className = 'celebration-message';
+  message.innerHTML = `
+    <div style="
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: #000;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      text-align: center;
+      font-size: 1.2em;
+      border: 2px solid #000;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    ">
+      🎉 NEW HIGHSCORE! 🎉<br>
+      <strong style="font-size: 1.5em;">${score} points!</strong>
+    </div>
+  `;
+  
+  // Add to modal content
+  const modalContent = modal.querySelector('div');
+  if (modalContent) {
+    // Insert after the final score paragraph
+    const scoreParagraph = modalContent.querySelector('p:nth-child(3)'); // The paragraph with final score
+    if (scoreParagraph) {
+      modalContent.insertBefore(message, scoreParagraph.nextSibling);
+    } else {
+      // Fallback: insert before buttons
+      const buttons = modalContent.querySelector('button');
+      if (buttons) {
+        modalContent.insertBefore(message, buttons);
+      }
+    }
+  }
+}
   async saveScoreToDB(score) {
   try {
     const token = localStorage.getItem('gameToken');

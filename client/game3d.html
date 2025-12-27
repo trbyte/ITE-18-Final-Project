@@ -29,6 +29,20 @@
       border: 2px solid #000000;
       pointer-events: none;
     }
+    #highscore-board {
+      position: absolute; 
+      top: 100px; 
+      right: 20px; 
+      color: #ffd700; 
+      background: rgba(0, 0, 0, 0.6); 
+      padding: 15px; 
+      border-radius: 8px; 
+      font-size: 20px; 
+      font-weight: bold; 
+      z-index: 1000;
+      border: 2px solid #ffd700;
+      pointer-events: none;
+    }
     #game-over-modal {
       display: none; 
       position: fixed; 
@@ -52,15 +66,23 @@
 <body>
   <canvas id="game"></canvas>
 
+  <!-- Current Score Display -->
   <div id="scoreboard">
     Score: <span id="score-value">0</span>
   </div>
+  
+  <!-- High Score Display -->
+  <div id="highscore-board">
+    High Score: <span id="highscore-value">0</span>
+  </div>
 
+  <!-- Game Over Modal -->
   <div id="game-over-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;">
   <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
     <h2>Game Over!</h2>
     <p>You hit a barrier!</p>
     <p>Final Score: <span id="final-score">0</span></p>
+    <p id="new-highscore-message" style="color: #ffd700; font-weight: bold; display: none;">🎉 NEW HIGH SCORE! 🎉</p>
     <button onclick="window.location.href='game3d.html'">Play Again</button>
     <button onclick="window.location.href='game.html'" style="margin-left: 10px;">Back to Dashboard</button>
   </div>
@@ -88,9 +110,81 @@
   
     let sceneManager, roadManager, streetlightManager, cameraController, carController, barrierManager;
     let loader;
+    let currentScore = 0;
+    let highScore = 0;
+    let isGameOver = false;
+    
+    // Load high score from localStorage
+    function loadHighScore() {
+      const savedHighScore = localStorage.getItem('driveSmartHighScore');
+      highScore = savedHighScore ? parseInt(savedHighScore) : 0;
+      document.getElementById('highscore-value').textContent = highScore;
+    }
+    
+    // Update high score
+    function updateHighScore(newScore) {
+      if (newScore > highScore) {
+        highScore = newScore;
+        localStorage.setItem('driveSmartHighScore', highScore.toString());
+        document.getElementById('highscore-value').textContent = highScore;
+        return true; // New high score achieved
+      }
+      return false; // No new high score
+    }
+    
+    // Game over function
+    function gameOver() {
+      if (isGameOver) return;
+      
+      isGameOver = true;
+      
+      // Update final score
+      const finalScore = currentScore;
+      document.getElementById('final-score').textContent = finalScore;
+      
+      // Check for new high score
+      const isNewHighScore = updateHighScore(finalScore);
+      
+      // Show new high score message if achieved
+      if (isNewHighScore) {
+        document.getElementById('new-highscore-message').style.display = 'block';
+      }
+      
+      // Show game over modal
+      document.getElementById('game-over-modal').style.display = 'flex';
+      
+      // Send score to server (optional)
+      sendScoreToServer(finalScore);
+    }
+    
+    // Send score to server
+    async function sendScoreToServer(score) {
+      const token = localStorage.getItem('gameToken');
+      if (!token) return;
+      
+      try {
+        const response = await fetch('http://localhost:5000/save-score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ score: score })
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to save score to server');
+        }
+      } catch (err) {
+        console.error('Error saving score:', err);
+      }
+    }
     
     function init() {
       loader = new GLTFLoader();
+      
+      // Load high score at start
+      loadHighScore();
       
       const canvas = document.getElementById("game");
       
@@ -151,18 +245,25 @@
         sceneManager.updateSkybox();
       }
       
-      if (carController && carController.mesh && !carController.isGameOver) {
+      if (carController && carController.mesh && !isGameOver) {
         const barriers = barrierManager ? barrierManager.getBarriers() : [];
         
         if (carController.update) {
           carController.update(sceneManager.getCamera(), barriers);
         }
         
-        if (carController.score !== undefined) {
-          document.getElementById('score-value').textContent = carController.score;
-        } else {
-          const scoreValue = Math.floor(carController.mesh.position.z);
-          document.getElementById('score-value').textContent = Math.max(0, scoreValue);
+        // Update current score based on car position
+        if (carController.mesh) {
+          // Calculate score based on distance traveled (z-position)
+          const distanceTraveled = Math.max(0, carController.mesh.position.z);
+          currentScore = Math.floor(distanceTraveled);
+          document.getElementById('score-value').textContent = currentScore;
+          
+          // Check if car hit a barrier (you need to implement collision detection)
+          // This is a placeholder - you should use your actual collision detection
+          if (carController.isCollidingWithBarrier && !isGameOver) {
+            gameOver();
+          }
         }
       }
       
@@ -170,6 +271,10 @@
     }
     
     window.addEventListener('load', init);
+    
+    // Expose functions to global scope if needed
+    window.gameOver = gameOver;
+    window.updateHighScore = updateHighScore;
   </script>
 </body>
 </html>
