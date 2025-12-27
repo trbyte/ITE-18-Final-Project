@@ -38,8 +38,8 @@ async function handleLogin() {
 
   const endpoint = isRegisterMode ? '/register' : '/login';
   
-  // IMPORTANT: Use full backend URL
-  const backendUrl = 'http://localhost:5000';
+  // Use global API base URL (works for both local and Vercel)
+  const backendUrl = window.getApiBase ? window.getApiBase() : 'http://localhost:5000';
   const fullUrl = `${backendUrl}${endpoint}`;
   
   messageEl.textContent = isRegisterMode ? 'Creating account...' : 'Logging in...';
@@ -120,7 +120,8 @@ async function handleLogin() {
 // Test server connection
 async function testServerConnection() {
   try {
-    const testResponse = await fetch('http://localhost:5000');
+    const testUrl = window.getApiBase ? window.getApiBase() : 'http://localhost:5000';
+    const testResponse = await fetch(testUrl);
     console.log('Server test response:', testResponse.status);
     if (testResponse.ok) {
       const text = await testResponse.text();

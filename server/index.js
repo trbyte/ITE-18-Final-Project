@@ -22,10 +22,18 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve static files from client directory
-app.use(express.static(path.join(__dirname, '../client')));
-// Serve static files from assets directory
-app.use('/assets', express.static(path.join(__dirname, '../assets')));
+// Serve static files from client directory (with proper path handling for Vercel)
+const clientPath = path.join(__dirname, '../client');
+const assetsPath = path.join(__dirname, '../assets');
+
+// Serve static files - this works in both local and Vercel environments
+app.use(express.static(clientPath, { 
+  index: false, // Don't serve index.html automatically, we have routes for that
+  extensions: ['html', 'css', 'js', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'ico', 'json']
+}));
+
+// Serve assets directory
+app.use('/assets', express.static(assetsPath));
 
 function validatePassword(password) {
   if (password.length < 8) return "Password must be at least 8 characters long";
@@ -208,7 +216,7 @@ app.get("/health", (req, res) => {
     status: "ok", 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    service: "road-safety-simulator"
+    service: "drive-smart"
   });
 });
 
@@ -227,7 +235,7 @@ app.get("/test-db", async (req, res) => {
 
 app.get("/api", (req, res) => {
   res.json({ 
-    message: "Road Safety Simulator API",
+    message: "Drive Smart API",
     version: "1.0.0",
     endpoints: {
       auth: ["POST /register", "POST /login"],
@@ -249,24 +257,69 @@ app.get('/game3d.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../client', 'game3d.html'));
 });
 
-app.get('/*splat', (req, res) => {
+// Explicit routes for common static files to ensure they're served
+app.get('/auth.css', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'auth.css'));
+});
+
+app.get('/auth.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'auth.js'));
+});
+
+app.get('/api-config.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'api-config.js'));
+});
+
+app.get('/style.css', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'style.css'));
+});
+
+app.get('/main.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'main.js'));
+});
+
+app.get('/images/:filename', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'images', req.params.filename));
+});
+
+// Catch-all route for static files and SPA routing
+app.get('/*', (req, res, next) => {
+  // If it's a file with extension, try to serve it from client directory
   if (req.path.includes('.')) {
-    return res.status(404).send('File not found');
+    const filePath = path.join(__dirname, '../client', req.path);
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        // If file not found in client, try assets (already handled by middleware, but just in case)
+        if (req.path.startsWith('/assets/')) {
+          return next();
+        }
+        console.error('File not found:', req.path);
+        return res.status(404).send('File not found');
+      }
+    });
+  } else {
+    // For routes without extensions, serve index.html (SPA fallback)
+    res.sendFile(path.join(__dirname, '../client', 'index.html'));
   }
-  res.sendFile(path.join(__dirname, '../client', 'index.html'));
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+// Export app for Vercel serverless functions
+export default app;
 
-// Error handling
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-});
+// Only start server if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  });
 
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-});
+  // Error handling
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+  });
+
+  process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+  });
+}

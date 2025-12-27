@@ -1,4 +1,4 @@
-# Road Safety Simulator
+# Drive Smart
 
 A 3D interactive road safety simulation game built with Three.js, featuring user authentication, score tracking, and an immersive driving experience.
 
@@ -85,7 +85,7 @@ INSTALLATION & SETUP
 ------------------------------------------------------
 PROJECT STORY & CONCEPT
 ------------------------------------------------------
-Road Safety Simulator is an educational 3D driving game designed to promote safe driving practices through interactive gameplay. The game combines realistic 3D graphics with engaging mechanics to create an immersive learning experience.
+Drive Smart is an educational 3D driving game designed to promote safe driving practices through interactive gameplay. The game combines realistic 3D graphics with engaging mechanics to create an immersive learning experience.
 
 **Concept:**
 The game challenges players to navigate a 3D road environment while avoiding obstacles and maintaining safe driving practices. As players progress, the difficulty increases with faster speeds, creating a dynamic and challenging experience. The game emphasizes the importance of road safety through gameplay mechanics that reward careful driving and penalize collisions.
@@ -198,6 +198,19 @@ DEVELOPERS & TEAM ROLES
   - Game UI components 
   - User experience optimization and responsive design
   - Project documentation and README maintenance
+
+------------------------------------------------------
+DEPLOYMENT
+------------------------------------------------------
+This project can be deployed to Vercel. See `DEPLOYMENT.md` for detailed deployment instructions.
+
+**Quick Deploy to Vercel:**
+1. Push your code to GitHub
+2. Import project in Vercel dashboard
+3. Add environment variables (DATABASE_URL, JWT_SECRET, etc.)
+4. Deploy!
+
+For detailed steps, see `DEPLOYMENT.md`.
 
 ------------------------------------------------------
 TROUBLESHOOTING

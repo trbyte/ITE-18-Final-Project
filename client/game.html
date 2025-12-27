@@ -254,6 +254,7 @@
     </div>
   </div>
 
+  <script src="api-config.js"></script>
   <script>
     const userInfoEl = document.getElementById('userInfo');
     const usernameEl = document.getElementById('username');
@@ -283,7 +284,8 @@
     if (!token) return;
 
     try {
-        const response = await fetch('http://localhost:5000/load-progress', {
+        const apiBase = window.getApiBase ? window.getApiBase() : 'http://localhost:5000';
+        const response = await fetch(`${apiBase}/load-progress`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -342,7 +344,7 @@
       modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center;z-index:1000;';
       modal.innerHTML = `
         <div style="background:white;padding:25px;border-radius:12px;max-width:450px;width:90%;text-align:center;color:#000;">
-          <h2 style="margin-bottom:15px;">About Car Simulator</h2>
+          <h2 style="margin-bottom:15px;">About Drive Smart</h2>
           <p style="margin-bottom:10px;"><strong>Developers:</strong> Alvarez, Aguilar, Cabalan</p>
           <p style="margin-bottom:20px;line-height:1.5;"><strong>How to Play</strong></p>
           <ul style="line-height:1.6; margin-bottom:20px; text-align:left; padding-left:20px;">
