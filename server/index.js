@@ -3,10 +3,12 @@ import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import path from "path";
+import { fileURLToPath } from 'url';
 import { db } from "./db.js";
 
 dotenv.config();
-
+process.env.TZ = 'Asia/Manila';
 const app = express();
 
 // -----------------------------
@@ -16,7 +18,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('../'));
 
-// Password Validation Helper
+app.use(express.static(path.join(__dirname, '../client')));
+
 function validatePassword(password) {
   if (password.length < 8) return "Password must be at least 8 characters long";
   if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
@@ -26,9 +29,6 @@ function validatePassword(password) {
   return null;
 }
 
-// -----------------------------
-// AUTH MIDDLEWARE
-// -----------------------------
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -41,11 +41,6 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// -----------------------------
-// AUTH ROUTES
-// -----------------------------
-
-// REGISTER
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
@@ -72,7 +67,6 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// LOGIN
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -113,11 +107,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// -----------------------------
-// SCORE ROUTES
-// -----------------------------
-
-// SAVE PLAYER SCORE (Authenticated)
 app.post("/api/save-score", authenticateToken, async (req, res) => {
   const { score } = req.body;
   const userId = req.user.id;
@@ -153,51 +142,52 @@ app.post("/api/save-score", authenticateToken, async (req, res) => {
         [userId, scoreValue]
       );
     }
-
-    console.log("Score saved successfully for user:", userId);
-
-    res.json({ 
-      success: true, 
-      message: "Score saved successfully",
-      score: scoreValue 
-    });
-
+    res.json({ success: true });
   } catch (err) {
-    console.error("Error saving score:", err);
-    res.status(500).json({ error: "Failed to save score to database" });
+    res.status(500).send("Server Error");
   }
 });
 
-// LOAD PROGRESS (Authenticated)
-app.get("/load-progress", authenticateToken, async (req, res) => {
+// GET USER HIGHSCORE
+app.get("/api/highscore", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
     const result = await db.query(
-      `SELECT level, score, last_played 
-       FROM player_progress 
+      `SELECT 
+         highscore,
+         score as last_score,
+         last_played,
+         -- Rank among all users
+         (SELECT COUNT(*) + 1 
+          FROM player_progress pp2 
+          WHERE pp2.highscore > pp.highscore) as rank
+       FROM player_progress pp
        WHERE user_id = $1`,
       [userId]
     );
 
     if (result.rows.length === 0) {
       return res.json({ 
-        level: 1,
-        score: 0,
-        last_played: null
+        highscore: 0,
+        last_score: 0,
+        rank: null,
+        message: "No games played yet"
       });
     }
 
-    const progress = result.rows[0];
+    const data = result.rows[0];
     res.json({
-      level: progress.level || 1,
-      score: progress.score || 0,
-      last_played: progress.last_played
+      highscore: data.highscore || 0,
+      last_score: data.score || 0,
+      rank: data.rank,
+      last_played: data.last_played ? 
+        new Date(data.last_played).toISOString() : null
     });
 
   } catch (err) {
-    console.error("Error loading progress:", err);
-    res.status(500).json({ error: "Failed to load progress" });
+    console.error("Error loading highscore:", err);
+    res.status(500).json({ error: "Failed to load highscore" });
   }
 });
 
@@ -208,7 +198,6 @@ app.get("/", (req, res) => {
   res.redirect('/client/game.html');
 });
 
-// Test database connection
 app.get("/test-db", async (req, res) => {
   try {
     const result = await db.query("SELECT NOW() as current_time");
@@ -222,16 +211,37 @@ app.get("/test-db", async (req, res) => {
   }
 });
 
-// Health check
-app.get("/health", (req, res) => {
+app.get("/api", (req, res) => {
   res.json({ 
-    status: "ok", 
-    timestamp: new Date().toISOString(),
-    service: "road-safety-simulator"
+    message: "Road Safety Simulator API",
+    version: "1.0.0",
+    endpoints: {
+      auth: ["POST /register", "POST /login"],
+      scores: ["POST /api/save-score", "GET /load-progress"],
+      health: ["GET /health", "GET /test-db"]
+    }
   });
 });
 
-// Start server
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'index.html'));
+});
+
+app.get('/game.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'game.html'));
+});
+
+app.get('/game3d.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client', 'game3d.html'));
+});
+
+app.get('/*splat', (req, res) => {
+  if (req.path.includes('.')) {
+    return res.status(404).send('File not found');
+  }
+  res.sendFile(path.join(__dirname, '../client', 'index.html'));
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
@@ -240,9 +250,9 @@ app.listen(PORT, () => {
 
 // Error handling
 process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
+  console.error('Uncaught Exception:', err);
 });
 
 process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Rejection:', err);
+  console.error('Unhandled Rejection:', err);
 });

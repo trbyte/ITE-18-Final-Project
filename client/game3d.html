@@ -29,42 +29,46 @@
       border: 2px solid #000000;
       pointer-events: none;
     }
-    #game-over-modal {
-      display: none; 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0,0,0,0.8); 
-      justify-content: center; 
-      align-items: center; 
+    #highscore-board {
+      position: absolute; 
+      top: 100px; 
+      right: 20px; 
+      color: #ffd700; 
+      background: rgba(0, 0, 0, 0.6); 
+      padding: 15px; 
+      border-radius: 8px; 
+      font-size: 20px; 
+      font-weight: bold; 
       z-index: 1000;
-    }
-    #game-over-modal div {
-      background: white; 
-      padding: 30px; 
-      border-radius: 10px; 
-      text-align: center;
+      border: 2px solid #ffd700;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
 
+  <!-- Current Score Display -->
   <div id="scoreboard">
     Score: <span id="score-value">0</span>
   </div>
-
-  <div id="game-over-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;">
-  <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
-    <h2>Game Over!</h2>
-    <p>You hit a barrier!</p>
-    <p>Final Score: <span id="final-score">0</span></p>
-    <button onclick="window.location.href='game3d.html'">Play Again</button>
-    <button onclick="window.location.href='game.html'" style="margin-left: 10px;">Back to Dashboard</button>
+  
+  <!-- High Score Display -->
+  <div id="highscore-board">
+    High Score: <span id="highscore-value">0</span>
   </div>
-</div>
+
+  <!-- Game Over Modal -->
+  <div id="game-over-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: white; padding: 30px; border-radius: 10px; text-align: center;">
+      <h2>Game Over!</h2>
+      <p>You hit a barrier!</p>
+      <p>Final Score: <span id="final-score">0</span></p>
+      <p id="new-highscore-message" style="color: #ffd700; font-weight: bold; display: none;">🎉 NEW HIGH SCORE! 🎉</p>
+      <button onclick="window.location.href='game3d.html'">Play Again</button>
+      <button onclick="window.location.href='game.html'" style="margin-left: 10px;">Back to Dashboard</button>
+    </div>
+  </div>
 
   <!-- Three.js -->
   <script type="importmap">
@@ -88,9 +92,132 @@
   
     let sceneManager, roadManager, streetlightManager, cameraController, carController, barrierManager;
     let loader;
+    let currentScore = 0;
+    let highScore = 0;
+    let isGameOver = false;
+    let gameStarted = false;
+    
+    // Load high score from server
+    async function loadHighScore() {
+      const token = localStorage.getItem('gameToken');
+      try {
+        const response = await fetch('http://localhost:5000/load-progress', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          highScore = parseInt(data.score) || 0;
+          document.getElementById('highscore-value').textContent = highScore;
+        }
+      } catch (err) {
+        console.error("Failed to load high score:", err);
+      }
+    }
+    
+    // Check for collisions
+    function checkCollisions() {
+      if (!carController || !carController.mesh || !barrierManager || isGameOver || !gameStarted) {
+        return false;
+      }
+      
+      const barriers = barrierManager.getBarriers();
+      if (!barriers || barriers.length === 0) return false;
+      
+      const carBox = new THREE.Box3().setFromObject(carController.mesh);
+      
+      for (const barrier of barriers) {
+        if (!barrier.mesh) continue;
+        
+        const barrierBox = new THREE.Box3().setFromObject(barrier.mesh);
+        if (carBox.intersectsBox(barrierBox)) {
+          return true; // Collision detected
+        }
+      }
+      return false;
+    }
+    
+    // Game over function
+    function gameOver() {
+    if (isGameOver) return;
+    isGameOver = true;
+
+    const finalScore = currentScore;
+    
+    // *** ADD THIS CODE TO SAVE TO LOCALSTORAGE ***
+    console.log(`🎮 Game Over! Saving score ${finalScore} to localStorage...`);
+    
+    // Save with MULTIPLE keys to ensure dashboard finds it
+    localStorage.setItem('lastSessionScore', finalScore.toString());
+    localStorage.setItem('driveSmartLatestScore', finalScore.toString());
+    localStorage.setItem('latestScore', finalScore.toString());
+    localStorage.setItem('currentScore', finalScore.toString());
+    localStorage.setItem('sessionScore', finalScore.toString());
+    
+    // Log what we saved
+    console.log(`✅ Score ${finalScore} saved to localStorage with keys:`);
+    console.log(`   - lastSessionScore: ${finalScore}`);
+    console.log(`   - driveSmartLatestScore: ${finalScore}`);
+    console.log(`   - latestScore: ${finalScore}`);
+    
+    // Update high score if needed
+    if (finalScore > highScore) {
+        localStorage.setItem('driveSmartHighScore', finalScore.toString());
+        console.log(`🏆 New high score! Saved to driveSmartHighScore: ${finalScore}`);
+    }
+    
+    // ... rest of your existing gameOver code ...
+    document.getElementById('final-score').textContent = finalScore;
+    
+    // Check for new high score
+    const isNewHighScore = finalScore > highScore;
+    if (isNewHighScore) {
+        highScore = finalScore;
+        document.getElementById('new-highscore-message').style.display = 'block';
+        document.getElementById('highscore-value').textContent = highScore;
+    }
+    
+    document.getElementById('game-over-modal').style.display = 'flex';
+    
+    // Send score to server
+    sendScoreToServer(finalScore);
+}
+    
+    // Send score to server
+    async function sendScoreToServer(score) {
+      const token = localStorage.getItem('gameToken');
+      if (!token) return;
+      
+      try {
+        const response = await fetch('http://localhost:5000/save-score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ score: score })
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to save score to server');
+        }
+      } catch (err) {
+        console.error('Error saving score:', err);
+      }
+    }
     
     function init() {
+      // Check authentication
+      const token = localStorage.getItem('gameToken');
+      if (!token) {
+        alert("Please login first!");
+        window.location.href = 'index.html';
+        return;
+      }
+      
       loader = new GLTFLoader();
+      
+      // Load high score at start
+      loadHighScore();
       
       const canvas = document.getElementById("game");
       
@@ -127,9 +254,12 @@
       
       roadManager.loadStreetRoad();
       
+      // Load barriers after a short delay to ensure everything is ready
       setTimeout(() => {
         barrierManager.loadBarriers();
-      }, 500);
+        gameStarted = true;
+        console.log("Game started. Barriers loaded.");
+      }, 1000);
       
       window.addEventListener("resize", () => {
         sceneManager.onWindowResize();
@@ -151,23 +281,39 @@
         sceneManager.updateSkybox();
       }
       
-      if (carController && carController.mesh && !carController.isGameOver) {
+      if (carController && carController.mesh && !isGameOver) {
         const barriers = barrierManager ? barrierManager.getBarriers() : [];
         
         if (carController.update) {
           carController.update(sceneManager.getCamera(), barriers);
         }
         
-        if (carController.score !== undefined) {
-          document.getElementById('score-value').textContent = carController.score;
-        } else {
-          const scoreValue = Math.floor(carController.mesh.position.z);
-          document.getElementById('score-value').textContent = Math.max(0, scoreValue);
+        // Update current score based on car position
+        if (carController.mesh) {
+          // Calculate score based on distance traveled (z-position)
+          const distanceTraveled = Math.max(0, carController.mesh.position.z);
+          currentScore = Math.floor(distanceTraveled);
+          document.getElementById('score-value').textContent = currentScore;
+          
+          // Check for collisions
+          if (checkCollisions()) {
+            gameOver();
+          }
         }
       }
       
       sceneManager.render();
     }
+    
+    // Add keyboard shortcut for testing (press 'T' to trigger game over)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 't' || e.key === 'T') {
+        if (!isGameOver) {
+          console.log("Test: Triggering game over");
+          gameOver();
+        }
+      }
+    });
     
     window.addEventListener('load', init);
   </script>

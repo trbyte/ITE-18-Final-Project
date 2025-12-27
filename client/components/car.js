@@ -6,29 +6,28 @@ export class CarController {
     this.loader = loader;
 
     this.mesh = null;
-    this.wheels = [];
-    this.frontWheels = [];
+    this.wheels = [];       
+    this.frontWheels = [];  
 
+    // Driving Properties
     this.speed = 0;
-    this.initialSpeed = 0.07;
-    this.maxSpeed = 0.70;
-    this.speedIncreaseDistance = 300.0;
-    this.currentSpeed = this.initialSpeed;
+    this.maxSpeed = 0.15;
     this.acceleration = 0.01;
     this.brake = 0.02;
     this.turnSpeed = 0.03;
-    this.lateralMoveSpeed = 0.08;
 
-    this.roadLimit = 1.5;
-    this.bounceStrength = 0.04;
+    // Collision & Feedback Properties
+    this.roadLimit = 1.5; 
+    this.bounceStrength = 0.04; 
     this.shakeIntensity = 0;
-    this.barriers = [];
-    this.isGameOver = false;
+    this.barriers = []; 
+    this.isGameOver = false; 
 
+    // Scoring Properties
     this.score = 0;
-    this.lastZPosition = 0;
-    this.distanceTraveled = 0;
-    this.scorePerUnit = 5;
+    this.lastZPosition = 0; // Track last position for distance calculation
+    this.distanceTraveled = 0; // Total forward distance
+    this.scorePerUnit = 5; // Points per unit of forward travel
 
     this.keys = { w: false, a: false, s: false, d: false };
 
@@ -49,14 +48,21 @@ export class CarController {
       }
 
       const currentPath = possiblePaths[pathIndex];
-      this.loader.setPath('');
+      
+      this.loader.setPath(''); 
+
+      console.log(`Attempting to load: ${currentPath}`);
 
       this.loader.load(currentPath, (gltf) => {
+        console.log('SUCCESS: Car loaded from:', currentPath);
         this.mesh = gltf.scene;
         
-        this.mesh.rotation.y = 0;
-        this.mesh.position.set(0, 0, 80);
+        // Setup
+        this.mesh.rotation.y = 0; 
+        this.mesh.position.set(0, 0, 0);
         this.mesh.scale.set(0.95, 0.95, 0.95);
+        
+        // Initialize tracking variables
         this.lastZPosition = this.mesh.position.z;
 
         this.mesh.traverse((child) => {
@@ -100,45 +106,55 @@ export class CarController {
   update(camera = null, barriers = null) {
     if (!this.mesh || this.isGameOver) return;
 
+    // Update barriers if provided
     if (barriers && Array.isArray(barriers)) {
       this.barriers = barriers;
     }
 
+    const moveSpeed = this.maxSpeed;
     const wheelSpinSpeed = 0.1;
     const steerAngle = 0.4;
+
+    // 1. Calculate forward movement for scoring
     const currentZ = this.mesh.position.z;
-    const forwardMovement = this.lastZPosition - currentZ;
+    const forwardMovement = this.lastZPosition - currentZ; // Negative = forward
     
+    // Only award points for forward movement (negative forwardMovement)
     if (forwardMovement < 0) {
       this.distanceTraveled += Math.abs(forwardMovement);
-      this.score = Math.floor(this.distanceTraveled) * this.scorePerUnit;
+      
+      // Award 5 points per unit of forward travel
+      const unitsTraveled = Math.floor(this.distanceTraveled);
+      this.score = unitsTraveled * this.scorePerUnit;
+      
+      // Update score display
       this.updateScoreDisplay();
     }
     
+    // Update last position for next frame
     this.lastZPosition = currentZ;
 
-    if (this.distanceTraveled >= this.speedIncreaseDistance) {
-      this.currentSpeed = this.maxSpeed;
-    } else {
-      const speedProgress = this.distanceTraveled / this.speedIncreaseDistance;
-      this.currentSpeed = this.initialSpeed + (this.maxSpeed - this.initialSpeed) * speedProgress;
-    }
-
+    // 2. Movement Logic
     if (this.keys.w) {
-      this.mesh.position.z += this.currentSpeed;
+      this.mesh.position.z += moveSpeed;
       this.wheels.forEach(w => w.rotation.x += wheelSpinSpeed);
+    }
+    if (this.keys.s) {
+      this.mesh.position.z -= moveSpeed;
+      this.wheels.forEach(w => w.rotation.x -= wheelSpinSpeed);
     }
 
     if (this.keys.a) {
-      this.mesh.position.x += this.lateralMoveSpeed;
+      this.mesh.position.x += moveSpeed;
       this.frontWheels.forEach(w => w.rotation.y = steerAngle);
     } else if (this.keys.d) {
-      this.mesh.position.x -= this.lateralMoveSpeed;
+      this.mesh.position.x -= moveSpeed;
       this.frontWheels.forEach(w => w.rotation.y = -steerAngle);
     } else {
       this.frontWheels.forEach(w => w.rotation.y = 0);
     }
 
+    // 3. Collision with Road Edge
     if (this.mesh.position.x > this.roadLimit) {
       this.mesh.position.x = this.roadLimit - this.bounceStrength;
       this.mesh.rotation.z = 0.08;
@@ -151,19 +167,34 @@ export class CarController {
       this.mesh.rotation.z *= 0.9;
     }
 
+    // 4. Camera Shake
     if (camera && this.shakeIntensity > 0) {
       camera.position.x += (Math.random() - 0.5) * this.shakeIntensity;
       camera.position.y += (Math.random() - 0.5) * this.shakeIntensity;
       this.shakeIntensity *= 0.90;
     }
 
-    if (this.barriers && this.barriers.length > 0) {
-      for (const barrier of this.barriers) {
-        if (!barrier?.position) continue;
-        if (this.mesh.position.distanceTo(barrier.position) < 1.5) {
-          this.triggerGameOver();
-          break;
+    // 5. Collision Detection with Barriers (FIXED: Use this.barriers not barriers)
+    if (this.barriers && this.barriers.length > 0) {  
+      let collisionDetected = false;
+      this.barriers.forEach((barrier, index) => {  
+        if (!barrier || !barrier.position) return;
+        
+        const distance = this.mesh.position.distanceTo(barrier.position);
+        
+        // Debug: Log when getting close to a barrier
+        if (distance < 5.0 && Math.random() < 0.1) {
+          console.log(`Getting close to barrier ${index}: ${distance.toFixed(2)} units`);
         }
+        
+        if (distance < 1.5) { 
+          console.log(`COLLISION DETECTED! Barrier ${index}, Distance: ${distance.toFixed(2)}`);
+          collisionDetected = true;
+        }
+      });
+      
+      if (collisionDetected) {
+        this.triggerGameOver();
       }
     }
   }
@@ -175,18 +206,192 @@ export class CarController {
     }
   }
 
+  // ============ LOCALSTORAGE SAVING FUNCTION ============
+  saveToLocalStorage(score) {
+    try {
+      console.log('Saving to localStorage...');
+      
+      // Save with multiple keys to ensure dashboard finds it
+      const scoreStr = score.toString();
+      
+      // Primary key for dashboard
+      localStorage.setItem('lastSessionScore', scoreStr);
+      
+      // Secondary keys (backups)
+      localStorage.setItem('driveSmartLatestScore', scoreStr);
+      localStorage.setItem('latestScore', scoreStr);
+      localStorage.setItem('currentScore', scoreStr);
+      
+      // Save with timestamp
+      const scoreData = {
+        score: score,
+        timestamp: Date.now(),
+        date: new Date().toLocaleString()
+      };
+      localStorage.setItem('latestScoreData', JSON.stringify(scoreData));
+      
+      console.log('Score saved to localStorage:', score);
+      console.log('Keys saved: lastSessionScore, driveSmartLatestScore, latestScore, currentScore');
+      
+      // Verify the save
+      const savedScore = localStorage.getItem('lastSessionScore');
+      if (savedScore === scoreStr) {
+        console.log('✓ Verification PASSED: Score correctly saved to localStorage');
+      } else {
+        console.error('✗ Verification FAILED: localStorage save issue');
+      }
+      
+      // Also check and update high score
+      this.updateLocalHighScore(score);
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+      return false;
+    }
+  }
+
+  // ============ UPDATE LOCAL HIGH SCORE ============
+  updateLocalHighScore(score) {
+    try {
+      // Get current high score from localStorage
+      const currentHighScore = parseInt(localStorage.getItem('driveSmartHighScore') || '0');
+      const globalHighScore = parseInt(localStorage.getItem('gameHighscore') || '0');
+      
+      // Update if this score is higher
+      if (score > currentHighScore) {
+        localStorage.setItem('driveSmartHighScore', score.toString());
+        console.log('Updated driveSmartHighScore:', score);
+      }
+      
+      if (score > globalHighScore) {
+        localStorage.setItem('gameHighscore', score.toString());
+        console.log('Updated gameHighscore:', score);
+      }
+      
+      return score > currentHighScore || score > globalHighScore;
+    } catch (error) {
+      console.error('Error updating local high score:', error);
+      return false;
+    }
+  }
+
   triggerGameOver() {
     if (this.isGameOver) return;
     this.isGameOver = true;
     
-    const finalScore = this.score;
+    // Make sure we get the current score, not a cached one
+    const finalScore = Math.floor(this.mesh ? Math.max(0, this.mesh.position.z) : this.score);
+    
+    console.log('=========== GAME OVER ===========');
+    console.log('Final Score:', finalScore);
+    
+    // ============ CRITICAL: SAVE TO LOCALSTORAGE ============
+    const localStorageSaved = this.saveToLocalStorage(finalScore);
+    if (!localStorageSaved) {
+      console.warn('Could not save to localStorage. Dashboard may not show latest score.');
+    }
+    
+    // Show game over modal
+    this.showGameOverModal(finalScore);
+    
+    // Save score to database and check for highscore
+    this.saveScoreToDB(finalScore).then(result => {
+      // If it was a new highscore, show celebration
+      if (result && result.isNewHighscore) {
+        this.showHighscoreCelebration(finalScore);
+      }
+    }).catch(error => {
+      console.error('Error saving score to database:', error);
+      // Fallback to localStorage check for highscore celebration
+      this.checkLocalHighscore(finalScore);
+    });
+    
+    console.log('================================');
+  }
+
+  showGameOverModal(finalScore) {
     const modal = document.getElementById('game-over-modal');
     const finalScoreElement = document.getElementById('final-score');
     
-    if (modal) modal.style.display = 'flex';
-    if (finalScoreElement) finalScoreElement.textContent = finalScore;
+    if (modal) {
+      // Make sure modal is properly positioned
+      modal.style.display = 'flex';
+      modal.style.position = 'fixed';
+      modal.style.top = '0';
+      modal.style.left = '0';
+      modal.style.width = '100%';
+      modal.style.height = '100%';
+      modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+      modal.style.justifyContent = 'center';
+      modal.style.alignItems = 'center';
+      modal.style.zIndex = '9999'; // Very high z-index
+      
+      // Remove any existing celebration messages
+      const existingCelebration = modal.querySelector('.celebration-message');
+      if (existingCelebration) {
+        existingCelebration.remove();
+      }
+    }
     
-    this.saveScoreToDB(finalScore);
+    if (finalScoreElement) {
+      finalScoreElement.textContent = finalScore;
+    }
+  }
+
+  checkLocalHighscore(finalScore) {
+    // Get current highscore from localStorage
+    const currentHighscore = parseInt(localStorage.getItem('gameHighscore')) || 0;
+    
+    // Check if this is a new highscore
+    if (finalScore > currentHighscore) {
+      // Update localStorage
+      localStorage.setItem('gameHighscore', finalScore.toString());
+      
+      // Show celebration
+      this.showHighscoreCelebration(finalScore);
+    }
+  }
+
+  showHighscoreCelebration(score) {
+    const modal = document.getElementById('game-over-modal');
+    if (!modal) return;
+    
+    // Create celebration message
+    const message = document.createElement('div');
+    message.className = 'celebration-message';
+    message.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, #FFD700, #FFA500);
+        color: #000;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 15px 0;
+        text-align: center;
+        font-size: 1.2em;
+        border: 2px solid #000;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      ">
+        NEW HIGHSCORE! <br>
+        <strong style="font-size: 1.5em;">${score} points!</strong>
+      </div>
+    `;
+    
+    // Add to modal content
+    const modalContent = modal.querySelector('div');
+    if (modalContent) {
+      // Insert after the final score paragraph
+      const scoreParagraph = modalContent.querySelector('p:nth-child(3)'); // The paragraph with final score
+      if (scoreParagraph) {
+        modalContent.insertBefore(message, scoreParagraph.nextSibling);
+      } else {
+        // Fallback: insert before buttons
+        const buttons = modalContent.querySelector('button');
+        if (buttons) {
+          modalContent.insertBefore(message, buttons);
+        }
+      }
+    }
   }
 
   async saveScoreToDB(score) {
@@ -194,31 +399,55 @@ export class CarController {
       const token = localStorage.getItem('gameToken');
       const username = localStorage.getItem('gameUsername');
       
-      if (!token || !username) return;
+      if (!token || !username) {
+        console.warn("Not logged in - score won't be saved to database");
+        return { isNewHighscore: false };
+      }
+      
+      console.log(`Saving score ${score} for ${username}`);
       
       const response = await fetch('http://localhost:5000/api/save-score', {
         method: 'POST',
-        headers: {
+        headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ score: parseInt(score) })
+        body: JSON.stringify({ 
+          score: parseInt(score)
+        })
       });
       
-      const finalScoreElement = document.getElementById('final-score');
       if (response.ok) {
-        if (finalScoreElement) finalScoreElement.textContent = score;
+        const result = await response.json();
+        console.log("Score saved to database:", result.message);
+        
+        // Update final score display
+        const finalScoreElement = document.getElementById('final-score');
+        if (finalScoreElement) {
+          finalScoreElement.textContent = score;
+        }
+        
+        return result; // Return result which may contain isNewHighscore
       } else {
         const errorData = await response.json();
+        console.error("Failed to save score to database:", errorData.error);
+        
+        // Show error in game over modal
+        const finalScoreElement = document.getElementById('final-score');
         if (finalScoreElement) {
           finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Save failed: ${errorData.error || 'Server error'})</small>`;
         }
+        return { isNewHighscore: false };
       }
     } catch (err) {
+      console.error("Network error saving score to database:", err);
+      
+      // Show network error in game over modal
       const finalScoreElement = document.getElementById('final-score');
       if (finalScoreElement) {
-        finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Network error - score not saved)</small>`;
+        finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Network error - score not saved to server)</small>`;
       }
+      return { isNewHighscore: false };
     }
   }
 }

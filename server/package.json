@@ -1,20 +1,30 @@
 {
-  "name": "server",
+  "name": "road-safety-simulator-neon",
   "version": "1.0.0",
+  "description": "car simulator with user authentication",
   "type": "module",
+  "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "test:db": "node -e \"import('./db.js').then(m => m.testNeonConnection())\"",
+    "migrate": "node -e \"import('fs').then(fs => import('./db.js').then(async ({ db }) => { const sql = fs.readFileSync('./migrations.sql', 'utf8'); await db.query(sql); console.log('Migrations applied'); process.exit(0); }))\""
   },
+  "keywords": ["game", "simulator", "neondb", "postgresql"],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "pg": "^8.16.3"
+    "dotenv": "^16.3.1",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

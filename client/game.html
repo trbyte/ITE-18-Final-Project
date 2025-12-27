@@ -41,7 +41,7 @@
       font-size: 1.1rem;
       margin-bottom: 20px;
       text-align: center;
-      background: rgba(255,255,255,0.15);
+      background: rgba(0, 0, 0, 0.15);
       padding: 12px 20px;
       border-radius: 10px;
       width: 100%;
@@ -132,6 +132,64 @@
       content: '...';
       animation: dots 1.5s infinite;
     }
+
+    /* New Container for horizontal alignment */
+.score-container {
+  display: flex;
+  flex-direction: row; /* Align side-by-side */
+  gap: 20px;           /* Space between the two boxes */
+  width: 100%;
+  max-width: 820px;    /* Sum of both boxes + gap */
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* Adjust the existing classes to remove individual margins and set a fixed width */
+.score-display, .highscore-display {
+  flex: 1;             /* Make them equal width */
+  background: rgba(0,0,0,0.6);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 250px;    /* Keep them from getting too wide */
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  margin-bottom: 0 !important; /* Overriding previous margin */
+}
+
+/* Specific styling for Personal Best border to keep the gold theme */
+.highscore-display {
+  border-color: rgba(255,215,0,0.3);
+}
+
+.highscore-label {
+  font-size: 1rem; 
+  margin-bottom: 8px; 
+  opacity: 0.9; 
+  color: #FFD700;
+}
+
+.highscore-value {
+  font-size: clamp(2rem, 6vw, 3rem); /* Slightly smaller clamp to prevent overlap */
+  font-weight: bold;
+  color: #FFD700;
+  text-shadow: 0 0 8px rgba(255,215,0,0.5);
+  line-height: 1;
+  margin: 5px 0;
+}
+
+/* RESPONSIVE: Stack them only on very small mobile phones */
+@media (max-width: 600px) {
+  .score-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  .score-display, .highscore-display {
+    width: 100%;
+    max-width: 400px;
+  }
+}
     @keyframes dots {
       0%, 20% { content: '.'; }
       40% { content: '..'; }
@@ -166,12 +224,21 @@
     Welcome, <span id="username">Guest</span>
   </div>
   
+  <div class="score-container">
+  
   <div class="score-display">
     <div class="score-label">Your Latest Score</div>
     <div id="scoreValue" class="score-value">0</div>
     <div id="scoreDate" class="score-date">Never played before</div>
   </div>
-  
+
+  <div class="highscore-display">
+    <div class="highscore-label">Personal Best</div>
+    <div id="highscoreValue" class="highscore-value">0</div>
+  </div>
+</div>
+
+
   <div class="dashboard">
     <div class="card" id="playCard">
       Play Game
@@ -211,48 +278,53 @@
       }
     }
 
-    async function loadLatestScore() {
-      const token = localStorage.getItem('gameToken');
-      const username = localStorage.getItem('gameUsername');
-      
-      if (!token || !username) {
-        scoreValueEl.textContent = '0';
-        scoreDateEl.textContent = 'Please login';
-        return;
-      }
+   async function loadLatestScore() {
+    const token = localStorage.getItem('gameToken');
+    if (!token) return;
 
-      try {
-        scoreValueEl.textContent = 'Loading';
-        scoreValueEl.classList.add('loading');
-        
+    try {
         const response = await fetch('http://localhost:5000/load-progress', {
-          headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (response.ok) {
-          const data = await response.json();
-          scoreValueEl.classList.remove('loading');
-          scoreValueEl.textContent = data.score || '0';
-          
-          if (data.last_played) {
-            const date = new Date(data.last_played);
-            scoreDateEl.textContent = `Last: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-          } else {
-            scoreDateEl.textContent = 'No previous games';
-          }
-        } else {
-          scoreValueEl.classList.remove('loading');
-          scoreValueEl.textContent = 'Error';
-          scoreDateEl.textContent = 'Failed to load';
+            const data = await response.json();
+            
+            // 1. Personal Best: Fetched from Database (Permanent)
+            document.getElementById('highscoreValue').textContent = data.score || '0';
+            
+            // 2. Latest Score: ONLY from localStorage, no database fallback
+            // Check for multiple possible localStorage keys
+            let sessionScore = '0';
+            
+            // Try different key names
+            const possibleKeys = ['lastSessionScore', 'latestScore', 'currentScore', 'sessionScore'];
+            for (const key of possibleKeys) {
+                const value = localStorage.getItem(key);
+                if (value !== null && value !== undefined) {
+                    sessionScore = value;
+                    break; // Use the first found key
+                }
+            }
+            
+            // IMPORTANT: Don't fall back to database score
+            // Latest score should only show the most recent session, not personal best
+            document.getElementById('scoreValue').textContent = sessionScore;
+            
+            // 3. Date Formatting
+            if (data.last_played) {
+                const date = new Date(data.last_played);
+                const dateOptions = { day: '2-digit', month: 'short', year: 'numeric' };
+                document.getElementById('scoreDate').textContent = `Record Date: ${date.toLocaleDateString('en-GB', dateOptions)}`;
+            } else {
+                // If never played, show appropriate message
+                document.getElementById('scoreDate').textContent = 'Never played before';
+            }
         }
-      } catch (err) {
-        console.error('Network error:', err);
-        scoreValueEl.classList.remove('loading');
-        scoreValueEl.textContent = 'Offline';
-        scoreDateEl.textContent = 'Server not reachable';
-      }
+    } catch (err) {
+        console.error('Error loading scores:', err);
     }
-
+}
     function logout() {
       if (confirm('Logout?')) {
         localStorage.removeItem('gameToken');
@@ -270,9 +342,22 @@
       modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center;z-index:1000;';
       modal.innerHTML = `
         <div style="background:white;padding:25px;border-radius:12px;max-width:450px;width:90%;text-align:center;color:#000;">
-          <h2 style="margin-bottom:15px;">About Road Safety Simulator</h2>
+          <h2 style="margin-bottom:15px;">About Car Simulator</h2>
           <p style="margin-bottom:10px;"><strong>Developers:</strong> Alvarez, Aguilar, Cabalan</p>
-          <p style="margin-bottom:20px;line-height:1.5;">Interactive driving simulator teaching road safety awareness.</p>
+          <p style="margin-bottom:20px;line-height:1.5;"><strong>How to Play</strong></p>
+          <ul style="line-height:1.6; margin-bottom:20px; text-align:left; padding-left:20px;">
+          <li>Use the <strong>W, A, S, D</strong> keys to control the car:</li>
+      <ul style="padding-left:20px;">
+          <li><strong> W</strong> Move forward</li>
+          <li><strong>A</strong> Turn left</li>
+          <li><strong>S</strong> Move backward / brake</li>
+          <li><strong>D</strong> Turn right</li>
+      </ul>
+          <li>Drive carefully along the road and avoid all barriers and obstacles.</li>
+          <li>Your score increases the longer you drive without crashing.</li>
+          <li>Crashing into any barrier will immediately end the game.</li>
+          <li>The objective is to drive safely and achieve the highest score possible.</li>
+      </ul>
           <button onclick="this.parentElement.parentElement.remove()" style="background:#667eea;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;">
             Close
           </button>
