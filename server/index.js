@@ -11,14 +11,21 @@ dotenv.config();
 process.env.TZ = 'Asia/Manila';
 const app = express();
 
-// -----------------------------
-// MIDDLEWARE
-// -----------------------------
-app.use(cors());
-app.use(express.json());
-app.use(express.static('../'));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL || 'https://road-safety-simulator.railway.app'
+    : ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'],
+  credentials: true
+}));
+app.use(express.json());
+
+// Serve static files from client directory
 app.use(express.static(path.join(__dirname, '../client')));
+// Serve static files from assets directory
+app.use('/assets', express.static(path.join(__dirname, '../assets')));
 
 function validatePassword(password) {
   if (password.length < 8) return "Password must be at least 8 characters long";
@@ -111,36 +118,25 @@ app.post("/api/save-score", authenticateToken, async (req, res) => {
   const { score } = req.body;
   const userId = req.user.id;
 
-  console.log(`Saving score for user ID ${userId}: ${score}`);
-
-  if (score === undefined || score === null) {
-    return res.status(400).json({ error: "Score is required" });
-  }
-
-  const scoreValue = parseInt(score);
-  if (isNaN(scoreValue)) {
-    return res.status(400).json({ error: "Score must be a number" });
-  }
-
   try {
-    const checkResult = await db.query(
-      "SELECT * FROM player_progress WHERE user_id = $1",
-      [userId]
-    );
-
-    if (checkResult.rows.length > 0) {
-      await db.query(
-        `UPDATE player_progress 
-         SET score = $1, last_played = CURRENT_TIMESTAMP 
-         WHERE user_id = $2`,
-        [scoreValue, userId]
-      );
+    // 1. Get current PB
+    const result = await db.query("SELECT score FROM player_progress WHERE user_id = $1", [userId]);
+    
+    if (result.rows.length > 0) {
+      const currentPB = result.rows[0].score;
+      // 2. Only UPDATE if new score is higher
+      if (score > currentPB) {
+        await db.query(
+          "UPDATE player_progress SET score = $1, last_played = CURRENT_TIMESTAMP WHERE user_id = $2",
+          [score, userId]
+        );
+      } else {
+        // Just update the 'last_played' timestamp
+        await db.query("UPDATE player_progress SET last_played = CURRENT_TIMESTAMP WHERE user_id = $1", [userId]);
+      }
     } else {
-      await db.query(
-        `INSERT INTO player_progress (user_id, score, last_played) 
-         VALUES ($1, $2, CURRENT_TIMESTAMP)`,
-        [userId, scoreValue]
-      );
+      // First time player
+      await db.query("INSERT INTO player_progress (user_id, score) VALUES ($1, $2)", [userId, score]);
     }
     res.json({ success: true });
   } catch (err) {
@@ -191,11 +187,29 @@ app.get("/api/highscore", authenticateToken, async (req, res) => {
   }
 });
 
-// -----------------------------
-// ROUTES
-// -----------------------------
-app.get("/", (req, res) => {
-  res.redirect('/client/game.html');
+
+app.get("/load-progress", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await db.query("SELECT score, last_played FROM player_progress WHERE user_id = $1", [userId]);
+    if (result.rows.length === 0) return res.json({ score: 0, last_played: null });
+
+    res.json({
+      score: result.rows[0].score,
+      last_played: result.rows[0].last_played // This is the full timestamp
+    });
+  } catch (err) {
+    res.status(500).send("Error");
+  }
+});
+
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    service: "road-safety-simulator"
+  });
 });
 
 app.get("/test-db", async (req, res) => {
@@ -244,8 +258,8 @@ app.get('/*splat', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`👉 Open http://localhost:${PORT} to play!`);
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
 });
 
 // Error handling

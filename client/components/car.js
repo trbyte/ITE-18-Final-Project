@@ -10,11 +10,12 @@ export class CarController {
     this.frontWheels = [];  
 
     // Driving Properties
-    this.speed = 0;
-    this.maxSpeed = 0.15;
-    this.acceleration = 0.01;
-    this.brake = 0.02;
-    this.turnSpeed = 0.03;
+    this.baseSpeed = 0.08;  // Starting speed (slow)
+    this.maxSpeed = 0.08;    // Current max speed (will increase with score)
+    this.absoluteMaxSpeed = 0.5;  // Maximum speed limit (never exceed this)
+    this.scoreForMaxSpeed = 1400;  // Score needed to reach max speed (gradual progression)
+    this.baseLateralSpeed = 0.08;  // Base speed for left/right movement (stays relatively constant)
+    this.maxLateralSpeed = 0.12;  // Maximum lateral speed (doesn't increase as much as forward speed)
 
     // Collision & Feedback Properties
     this.roadLimit = 1.5; 
@@ -111,10 +112,6 @@ export class CarController {
       this.barriers = barriers;
     }
 
-    const moveSpeed = this.maxSpeed;
-    const wheelSpinSpeed = 0.1;
-    const steerAngle = 0.4;
-
     // 1. Calculate forward movement for scoring
     const currentZ = this.mesh.position.z;
     const forwardMovement = this.lastZPosition - currentZ; // Negative = forward
@@ -127,12 +124,23 @@ export class CarController {
       const unitsTraveled = Math.floor(this.distanceTraveled);
       this.score = unitsTraveled * this.scorePerUnit;
       
+      // Update speed based on score (gradually increases from slow start to max speed)
+      const speedProgress = Math.min(this.score / this.scoreForMaxSpeed, 1.0);
+      this.maxSpeed = this.baseSpeed + (speedProgress * (this.absoluteMaxSpeed - this.baseSpeed));
+      
       // Update score display
       this.updateScoreDisplay();
     }
     
     // Update last position for next frame
     this.lastZPosition = currentZ;
+
+    const moveSpeed = this.maxSpeed;
+    // Lateral speed increases slightly with score but much slower than forward speed
+    const speedProgress = Math.min(this.score / this.scoreForMaxSpeed, 1.0);
+    const lateralSpeed = this.baseLateralSpeed + (speedProgress * (this.maxLateralSpeed - this.baseLateralSpeed));
+    const wheelSpinSpeed = 0.1;
+    const steerAngle = 0.4;
 
     // 2. Movement Logic
     if (this.keys.w) {
@@ -145,10 +153,10 @@ export class CarController {
     }
 
     if (this.keys.a) {
-      this.mesh.position.x += moveSpeed;
+      this.mesh.position.x += lateralSpeed;
       this.frontWheels.forEach(w => w.rotation.y = steerAngle);
     } else if (this.keys.d) {
-      this.mesh.position.x -= moveSpeed;
+      this.mesh.position.x -= lateralSpeed;
       this.frontWheels.forEach(w => w.rotation.y = -steerAngle);
     } else {
       this.frontWheels.forEach(w => w.rotation.y = 0);
@@ -174,21 +182,15 @@ export class CarController {
       this.shakeIntensity *= 0.90;
     }
 
-    // 5. Collision Detection with Barriers (FIXED: Use this.barriers not barriers)
+    // 5. Collision Detection with Barriers
     if (this.barriers && this.barriers.length > 0) {  
       let collisionDetected = false;
-      this.barriers.forEach((barrier, index) => {  
+      this.barriers.forEach((barrier) => {  
         if (!barrier || !barrier.position) return;
         
         const distance = this.mesh.position.distanceTo(barrier.position);
         
-        // Debug: Log when getting close to a barrier
-        if (distance < 5.0 && Math.random() < 0.1) {
-          console.log(`Getting close to barrier ${index}: ${distance.toFixed(2)} units`);
-        }
-        
         if (distance < 1.5) { 
-          console.log(`COLLISION DETECTED! Barrier ${index}, Distance: ${distance.toFixed(2)}`);
           collisionDetected = true;
         }
       });
@@ -206,23 +208,15 @@ export class CarController {
     }
   }
 
-  // ============ LOCALSTORAGE SAVING FUNCTION ============
   saveToLocalStorage(score) {
     try {
-      console.log('Saving to localStorage...');
-      
-      // Save with multiple keys to ensure dashboard finds it
       const scoreStr = score.toString();
       
-      // Primary key for dashboard
       localStorage.setItem('lastSessionScore', scoreStr);
-      
-      // Secondary keys (backups)
       localStorage.setItem('driveSmartLatestScore', scoreStr);
       localStorage.setItem('latestScore', scoreStr);
       localStorage.setItem('currentScore', scoreStr);
       
-      // Save with timestamp
       const scoreData = {
         score: score,
         timestamp: Date.now(),
@@ -230,20 +224,7 @@ export class CarController {
       };
       localStorage.setItem('latestScoreData', JSON.stringify(scoreData));
       
-      console.log('Score saved to localStorage:', score);
-      console.log('Keys saved: lastSessionScore, driveSmartLatestScore, latestScore, currentScore');
-      
-      // Verify the save
-      const savedScore = localStorage.getItem('lastSessionScore');
-      if (savedScore === scoreStr) {
-        console.log('✓ Verification PASSED: Score correctly saved to localStorage');
-      } else {
-        console.error('✗ Verification FAILED: localStorage save issue');
-      }
-      
-      // Also check and update high score
       this.updateLocalHighScore(score);
-      
       return true;
     } catch (error) {
       console.error('Error saving to localStorage:', error);
@@ -251,22 +232,17 @@ export class CarController {
     }
   }
 
-  // ============ UPDATE LOCAL HIGH SCORE ============
   updateLocalHighScore(score) {
     try {
-      // Get current high score from localStorage
       const currentHighScore = parseInt(localStorage.getItem('driveSmartHighScore') || '0');
       const globalHighScore = parseInt(localStorage.getItem('gameHighscore') || '0');
       
-      // Update if this score is higher
       if (score > currentHighScore) {
         localStorage.setItem('driveSmartHighScore', score.toString());
-        console.log('Updated driveSmartHighScore:', score);
       }
       
       if (score > globalHighScore) {
         localStorage.setItem('gameHighscore', score.toString());
-        console.log('Updated gameHighscore:', score);
       }
       
       return score > currentHighScore || score > globalHighScore;
@@ -280,34 +256,19 @@ export class CarController {
     if (this.isGameOver) return;
     this.isGameOver = true;
     
-    // Make sure we get the current score, not a cached one
-    const finalScore = Math.floor(this.mesh ? Math.max(0, this.mesh.position.z) : this.score);
+    const finalScore = Math.floor(this.score);
     
-    console.log('=========== GAME OVER ===========');
-    console.log('Final Score:', finalScore);
-    
-    // ============ CRITICAL: SAVE TO LOCALSTORAGE ============
-    const localStorageSaved = this.saveToLocalStorage(finalScore);
-    if (!localStorageSaved) {
-      console.warn('Could not save to localStorage. Dashboard may not show latest score.');
-    }
-    
-    // Show game over modal
+    this.saveToLocalStorage(finalScore);
     this.showGameOverModal(finalScore);
     
     // Save score to database and check for highscore
     this.saveScoreToDB(finalScore).then(result => {
-      // If it was a new highscore, show celebration
       if (result && result.isNewHighscore) {
         this.showHighscoreCelebration(finalScore);
       }
-    }).catch(error => {
-      console.error('Error saving score to database:', error);
-      // Fallback to localStorage check for highscore celebration
+    }).catch(() => {
       this.checkLocalHighscore(finalScore);
     });
-    
-    console.log('================================');
   }
 
   showGameOverModal(finalScore) {
@@ -404,8 +365,6 @@ export class CarController {
         return { isNewHighscore: false };
       }
       
-      console.log(`Saving score ${score} for ${username}`);
-      
       const response = await fetch('http://localhost:5000/api/save-score', {
         method: 'POST',
         headers: { 
@@ -419,34 +378,18 @@ export class CarController {
       
       if (response.ok) {
         const result = await response.json();
-        console.log("Score saved to database:", result.message);
-        
-        // Update final score display
         const finalScoreElement = document.getElementById('final-score');
         if (finalScoreElement) {
           finalScoreElement.textContent = score;
         }
-        
-        return result; // Return result which may contain isNewHighscore
+        return result;
       } else {
         const errorData = await response.json();
         console.error("Failed to save score to database:", errorData.error);
-        
-        // Show error in game over modal
-        const finalScoreElement = document.getElementById('final-score');
-        if (finalScoreElement) {
-          finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Save failed: ${errorData.error || 'Server error'})</small>`;
-        }
         return { isNewHighscore: false };
       }
     } catch (err) {
       console.error("Network error saving score to database:", err);
-      
-      // Show network error in game over modal
-      const finalScoreElement = document.getElementById('final-score');
-      if (finalScoreElement) {
-        finalScoreElement.innerHTML = `${score}<br><small style="color: #ff6b6b; font-size: 0.8em;">(Network error - score not saved to server)</small>`;
-      }
       return { isNewHighscore: false };
     }
   }
