@@ -8,8 +8,38 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "server/index.js"
+    },
+    {
+      "src": "/register",
+      "dest": "server/index.js"
+    },
+    {
+      "src": "/login",
+      "dest": "server/index.js"
+    },
+    {
+      "src": "/load-progress",
+      "dest": "server/index.js"
+    },
+    {
+      "src": "/health",
+      "dest": "server/index.js"
+    },
+    {
+      "src": "/test-db",
+      "dest": "server/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "server/index.js"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/assets/:path*",
+      "destination": "/assets/:path*"
     }
   ]
 }
