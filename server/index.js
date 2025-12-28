@@ -15,8 +15,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://road-safety-simulator.railway.app'
+  origin: process.env.NODE_ENV === 'production' ? 
+      ['https://drive-smart.vercel.app']
     : ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'],
   credentials: true
 }));
