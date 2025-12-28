@@ -152,7 +152,6 @@
     
     // Save with MULTIPLE keys to ensure dashboard finds it
     localStorage.setItem('lastSessionScore', finalScore.toString());
-    localStorage.setItem('driveSmartLatestScore', finalScore.toString());
     localStorage.setItem('latestScore', finalScore.toString());
     localStorage.setItem('currentScore', finalScore.toString());
     localStorage.setItem('sessionScore', finalScore.toString());
@@ -160,7 +159,6 @@
     // Log what we saved
     console.log(`Score ${finalScore} saved to localStorage with keys:`);
     console.log(`   - lastSessionScore: ${finalScore}`);
-    console.log(`   - driveSmartLatestScore: ${finalScore}`);
     console.log(`   - latestScore: ${finalScore}`);
     
     // Update high score if needed
