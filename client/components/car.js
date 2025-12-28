@@ -213,7 +213,6 @@ export class CarController {
       const scoreStr = score.toString();
       
       localStorage.setItem('lastSessionScore', scoreStr);
-      localStorage.setItem('driveSmartLatestScore', scoreStr);
       localStorage.setItem('latestScore', scoreStr);
       localStorage.setItem('currentScore', scoreStr);
       

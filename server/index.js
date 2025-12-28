@@ -175,7 +175,6 @@ app.get("/api/highscore", authenticateToken, async (req, res) => {
       return res.json({ 
         highscore: 0,
         last_score: 0,
-        rank: null,
         message: "No games played yet"
       });
     }
@@ -184,7 +183,6 @@ app.get("/api/highscore", authenticateToken, async (req, res) => {
     res.json({
       highscore: data.highscore || 0,
       last_score: data.score || 0,
-      rank: data.rank,
       last_played: data.last_played ? 
         new Date(data.last_played).toISOString() : null
     });
