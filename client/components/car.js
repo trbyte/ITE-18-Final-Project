@@ -147,11 +147,6 @@ export class CarController {
       this.mesh.position.z += moveSpeed;
       this.wheels.forEach(w => w.rotation.x += wheelSpinSpeed);
     }
-    if (this.keys.s) {
-      this.mesh.position.z -= moveSpeed;
-      this.wheels.forEach(w => w.rotation.x -= wheelSpinSpeed);
-    }
-
     if (this.keys.a) {
       this.mesh.position.x += lateralSpeed;
       this.frontWheels.forEach(w => w.rotation.y = steerAngle);
